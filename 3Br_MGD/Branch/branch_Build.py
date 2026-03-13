@@ -53,7 +53,7 @@ class SingleEncoder(nn.Module):
         else:                                      # cnn
             self.encoder = SequenceCNN(vocab_size=vocab_size)
 
-    def forward(self, fp, graph_data, sequence):
+    def forward(self, fp, graph_data, sequence, **kwargs):
         if self.branch == 'gine':
             return self.encoder(
                 graph_data.x,
@@ -104,7 +104,7 @@ class DualEncoder(nn.Module):
         else:                                      # cnn
             return self.encoders['cnn'](sequence)
 
-    def forward(self, fp, graph_data, sequence):
+    def forward(self, fp, graph_data, sequence, **kwargs):
         emb1 = self._encode_one(self.branches[0], fp, graph_data, sequence)
         emb2 = self._encode_one(self.branches[1], fp, graph_data, sequence)
         return self.fusion(emb1, emb2)

@@ -107,26 +107,24 @@
       "n_negative": 1405,
       "n_total": 1427,
       "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Product_issues.pt"
-    }
-  },
-  "meta_val": {
+    },
     "Metabolism and nutrition disorders": {
       "n_positive": 996,
       "n_negative": 431,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_val\\Metabolism_and_nutrition_disorders.pt"
+      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Metabolism_and_nutrition_disorders.pt"
     },
     "Gastrointestinal disorders": {
       "n_positive": 1298,
       "n_negative": 129,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_val\\Gastrointestinal_disorders.pt"
+      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Gastrointestinal_disorders.pt"
     },
     "Skin and subcutaneous tissue disorders": {
       "n_positive": 1318,
       "n_negative": 109,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_val\\Skin_and_subcutaneous_tissue_disorders.pt"
+      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Skin_and_subcutaneous_tissue_disorders.pt"
     }
   },
   "meta_test": {

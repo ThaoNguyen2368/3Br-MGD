@@ -47,14 +47,12 @@
       "n_negative": 4883,
       "n_total": 5825,
       "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\SR-ARE.pt"
-    }
-  },
-  "meta_val": {
+    },
     "SR-ATAD5": {
       "n_positive": 264,
       "n_negative": 6801,
       "n_total": 7065,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_val\\SR-ATAD5.pt"
+      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\SR-ATAD5.pt"
     }
   },
   "meta_test": {

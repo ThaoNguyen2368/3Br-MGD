@@ -193,8 +193,8 @@ def main():
     parser.add_argument('--dataset',         type=str, default='tox21',
                         choices=['tox21', 'sider'])
     parser.add_argument('--shots',           type=int, nargs='+', default=[5, 10])
-    parser.add_argument('--test_episodes',   type=int, default=100)
-    parser.add_argument('--q_query',         type=int, default=10)
+    parser.add_argument('--test_episodes',   type=int, default=30)
+    parser.add_argument('--q_query',         type=int, default=128)
     args = parser.parse_args()
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -214,7 +214,7 @@ def main():
         shot_name = f"{K_shot}-shot"
         ckpt_path = os.path.join(
             args.checkpoint_dir,
-            f"BrMGD_{args.dataset}_{shot_name}_best.pt"
+            f"BrMGD_{args.dataset}_{shot_name}_best.pth"
         )
 
         if not os.path.exists(ckpt_path):
@@ -228,11 +228,26 @@ def main():
         encoder  = TripleEncoder().to(device)
         protonet = EnhancedProtoNet(encoder).to(device)
 
-        ckpt = torch.load(ckpt_path, map_location=device)
-        protonet.load_state_dict(ckpt['model_state'])
-        print(f"  Checkpoint epoch={ckpt.get('epoch','?')}, "
-              f"val_auroc={ckpt.get('val_auroc', 0):.4f}")
-
+        try:
+            # Load file .pth
+            ckpt = torch.load(ckpt_path, map_location=device)
+            
+            # Kiểm tra xem ckpt là dict hay chỉ là state_dict thuần túy
+            if isinstance(ckpt, dict) and 'model_state' in ckpt:
+                protonet.load_state_dict(ckpt['model_state'])
+                epoch_info = ckpt.get('epoch', '?')
+                val_info = ckpt.get('val_auroc', 0.0)
+            else:
+                # Trường hợp file .pth chỉ lưu mỗi state_dict
+                protonet.load_state_dict(ckpt)
+                epoch_info = "Unknown"
+                val_info = 0.0
+                
+            print(f"✅ Loaded: Epoch={epoch_info}, Train_Query_AUROC={val_info:.4f}")
+            
+        except Exception as e:
+            print(f"❌ Error loading {ckpt_path}: {e}")
+            continue
         # Result file
         shot_num     = shot_name.replace('-shot', '')
         result_file  = os.path.join('results', f"mean-3BrMGD_{args.dataset}_{shot_num}shot.txt")

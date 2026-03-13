@@ -139,7 +139,7 @@ def main():
     parser.add_argument('--data_dir',        type=str, required=True,
                         help='Directory processed data')
     parser.add_argument('--checkpoint_dir',  type=str, default='checkpoints',
-                        help='Directory include checkpoint .pt')
+                        help='Directory include checkpoint .pth')
     parser.add_argument('--dataset',         type=str, default='tox21',
                         choices=['tox21', 'sider'])
     parser.add_argument('--variants',        type=str, nargs='+', default=['all'],
@@ -188,7 +188,7 @@ def main():
         for variant in variants_to_run:
             info = VARIANT_INFO[variant]
 
-            ckpt_name = f"{variant}_{args.dataset}_{shot_name}_best.pt"
+            ckpt_name = f"{variant}_{args.dataset}_{shot_name}_best.pth"
             ckpt_path = os.path.join(args.checkpoint_dir, ckpt_name)
 
             if not os.path.exists(ckpt_path):

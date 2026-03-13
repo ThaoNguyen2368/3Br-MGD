@@ -14,9 +14,8 @@ RDLogger.DisableLog('rdApp.*')
 TOX21_SPLITS = {
     'meta_train': [
         'NR-AR', 'NR-AR-LBD', 'NR-AhR', 'NR-Aromatase',
-        'NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE'
+        'NR-ER', 'NR-ER-LBD', 'NR-PPAR-gamma', 'SR-ARE', 'SR-ATAD5'
     ],
-    'meta_val':  ['SR-ATAD5'],
     'meta_test': ['SR-HSE', 'SR-MMP', 'SR-p53'],
 }
 
@@ -40,8 +39,6 @@ SIDER_SPLITS = {
         'Surgical and medical procedures',
         'Social circumstances',
         'Product issues',
-    ],
-    'meta_val': [
         'Metabolism and nutrition disorders',
         'Gastrointestinal disorders',
         'Skin and subcutaneous tissue disorders',
@@ -318,11 +315,10 @@ def load_all_splits(data_dir: str):
 
     print(f"Loading from {data_dir} ...")
     meta_train = _load_split('meta_train')
-    meta_val   = _load_split('meta_val')
     meta_test  = _load_split('meta_test')
     print(f"Done. train={len(meta_train)} tasks, "
-          f"val={len(meta_val)} tasks, test={len(meta_test)} tasks.")
-    return meta_train, meta_val, meta_test
+          f" test={len(meta_test)} tasks.")
+    return meta_train, meta_test
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Preprocess molecular dataset for meta-learning')
