@@ -5,6 +5,10 @@ import torch
 import matplotlib.pyplot as plt
 from copy import deepcopy
 
+import sys
+# Thêm đường dẫn tới thư mục Br_MGD để import data và các hàm bổ trợ
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Br_MGD")))
+
 from data import load_all_splits
 from branch_Build import build_model, VARIANT_NAMES, VARIANT_INFO
 from BrMGD_train import train_meta_epoch
@@ -96,7 +100,7 @@ def main():
 
     os.makedirs(args.output_dir, exist_ok=True)
 
-    meta_train, _, _ = load_all_splits(args.data_dir)
+    meta_train, _ = load_all_splits(args.data_dir)
 
     for K_shot in args.shots:
         shot_name = f"{K_shot}-shot"

@@ -5,6 +5,10 @@ import argparse
 import numpy as np
 import torch
 
+import sys
+# Thêm thư mục chứa script này vào path để import local
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from data import load_all_splits
 from BrMGD_model import TripleEncoder, EnhancedProtoNet
 from BrMGD_eval import evaluate_meta_task
@@ -206,7 +210,7 @@ def main():
     os.makedirs('results', exist_ok=True)
 
     # Load data
-    _, _, meta_test = load_all_splits(args.data_dir)
+    _, meta_test = load_all_splits(args.data_dir)
 
     results_per_shot = {}
 

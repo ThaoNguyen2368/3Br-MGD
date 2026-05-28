@@ -7,6 +7,10 @@ import torch.nn as nn
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from sklearn.metrics import roc_auc_score
+import sys
+# Thêm thư mục chứa script này vào path để import local
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 from data import load_all_splits
 from BrMGD_model import TripleEncoder, EnhancedProtoNet
 from BrMGD_eval import collate_batch
@@ -119,7 +123,7 @@ def main():
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs('results', exist_ok=True)
 
-    meta_train, _, _ = load_all_splits(args.data_dir)
+    meta_train, _ = load_all_splits(args.data_dir)
 
     for K_shot in args.shots:
         shot_name = f"{K_shot}-shot"

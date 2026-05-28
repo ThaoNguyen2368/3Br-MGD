@@ -7,7 +7,10 @@ import torch
 import torch.nn as nn
 from copy import deepcopy
 from sklearn.metrics import f1_score, roc_auc_score
-from transformers import AutoTokenizer, AutoModel
+import sys
+# Thêm đường dẫn tới thư mục Br_MGD để import 'data'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Br_MGD")))
+
 from data import load_all_splits
 
 
@@ -388,7 +391,8 @@ def main():
     os.makedirs('results', exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    meta_train, meta_val, meta_test = load_all_splits(args.data_dir)
+    meta_train, meta_test = load_all_splits(args.data_dir)
+    meta_val = None
     all_results = {}
 
     for K_shot in args.shots:

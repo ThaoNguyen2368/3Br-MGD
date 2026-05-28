@@ -4,6 +4,10 @@ import argparse
 import numpy as np
 import torch
 import matplotlib.pyplot as plt
+import sys
+# Thêm đường dẫn tới thư mục Br_MGD để import data và các hàm bổ trợ
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Br_MGD")))
+
 from data import load_all_splits
 from branch_Build import build_model, VARIANT_NAMES, VARIANT_INFO
 from BrMGD_eval import evaluate_meta_task
@@ -174,7 +178,7 @@ def main():
 
     os.makedirs('results', exist_ok=True)
 
-    _, _, meta_test = load_all_splits(args.data_dir)
+    _, meta_test = load_all_splits(args.data_dir)
 
     # all_results[shot_name][variant] = {task: metrics}
     all_results = {}

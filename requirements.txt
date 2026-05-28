@@ -1,0 +1,32 @@
+# ==============================================================================
+# Requirements file for the 3Br-MGD project
+# Conda Environment: 3Br_MGD
+# Python Version: 3.11
+# ==============================================================================
+
+# --- Deep Learning (PyTorch) ---
+# Note: For GPU support with CUDA 12.1, install via:
+# pip install torch==2.3.0 torchvision==0.18.0 torchaudio==2.3.0 --index-url https://download.pytorch.org/whl/cu121
+torch==2.3.0
+torchvision==0.18.0
+torchaudio==2.3.0
+
+# --- PyTorch Geometric (PyG) & Helpers ---
+# Note: For CUDA 12.1 compatibility, these can be installed via:
+# pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+torch-geometric==2.7.0
+torch-scatter==2.1.2
+torch-sparse==0.6.18
+torch-cluster==1.6.3
+
+# --- Cheminformatics ---
+rdkit==2025.9.5
+
+# --- Machine Learning & Data Processing ---
+numpy==1.26.4
+pandas==3.0.1
+scikit-learn==1.8.0
+transformers>=4.40.0
+
+# --- Visualization & Utilities ---
+matplotlib==3.10.8
