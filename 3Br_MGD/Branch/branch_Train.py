@@ -13,6 +13,19 @@ from data import load_all_splits
 from branch_Build import build_model, VARIANT_NAMES, VARIANT_INFO
 from BrMGD_train import train_meta_epoch
 
+
+def set_seed(seed: int = 42):
+    """Fix tất cả nguồn ngẫu nhiên để đảm bảo reproducibility."""
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 def train_branch(
     variant: str,
     meta_train: dict,
@@ -80,7 +93,11 @@ def main():
     parser.add_argument('--train_episodes',  type=int, default=100)
     parser.add_argument('--lr',              type=float, default=1e-3)
     parser.add_argument('--q_query',         type=int, default=128) # Tăng lên 128 theo protocol
+    parser.add_argument('--seed',            type=int, default=42,
+                        help='Random seed for reproducibility')
     args = parser.parse_args()
+
+    set_seed(args.seed)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -97,6 +114,7 @@ def main():
     print(f"Dataset  : {args.dataset}")
     print(f"Shots    : {args.shots}")
     print(f"Variants : {variants_to_run}")
+    print(f"Seed     : {args.seed}")
 
     os.makedirs(args.output_dir, exist_ok=True)
 

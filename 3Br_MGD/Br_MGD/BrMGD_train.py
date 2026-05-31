@@ -17,6 +17,17 @@ from BrMGD_eval import collate_batch
 import torch.nn.functional as F
 
 
+def set_seed(seed: int = 42):
+    """Fix tất cả nguồn ngẫu nhiên để đảm bảo reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
 def create_meta_task(task_data: dict, K_shot: int, Q_query: int, train: bool = True):
     pos_pool = task_data['pos']
     neg_pool = task_data['neg']
@@ -113,12 +124,17 @@ def main():
     parser.add_argument('--train_episodes',  type=int,   default=100)
     parser.add_argument('--lr',              type=float, default=1e-3)
     parser.add_argument('--q_query',         type=int,   default=128)
+    parser.add_argument('--seed',            type=int,   default=42,
+                        help='Random seed for reproducibility')
     args = parser.parse_args()
+
+    set_seed(args.seed)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     print(f"Device  : {device}")
     print(f"Dataset : {args.dataset}")
     print(f"Shots   : {args.shots}")
+    print(f"Seed    : {args.seed}")
 
     os.makedirs(args.output_dir, exist_ok=True)
     os.makedirs('results', exist_ok=True)

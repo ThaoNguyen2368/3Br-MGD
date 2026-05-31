@@ -7,11 +7,23 @@ import torch
 import torch.nn as nn
 from copy import deepcopy
 from sklearn.metrics import f1_score, roc_auc_score
+from transformers import AutoTokenizer, AutoModel
 import sys
 # Thêm đường dẫn tới thư mục Br_MGD để import 'data'
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Br_MGD")))
 
 from data import load_all_splits
+
+
+def set_seed(seed: int = 42):
+    """Fix tất cả nguồn ngẫu nhiên để đảm bảo reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 class ChemBERTaProtoNet(nn.Module):
@@ -377,7 +389,14 @@ def main():
     parser.add_argument('--q_query', type=int, default=128)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--output_dir', type=str, default='checkpoints')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducibility')
+    parser.add_argument('--val_ratio', type=float, default=0.2,
+                        help='Fraction of meta_train tasks dùng làm validation (default: 0.2)')
     args = parser.parse_args()
+
+    # --- Fix seed TRƯỚC KHI split để split cũng deterministic ---
+    set_seed(args.seed)
 
     freeze_bert = not args.no_freeze
 
@@ -387,12 +406,27 @@ def main():
     print(f"Shots       {args.shots}")
     print(f"Checkpoint  {args.checkpoint}")
     print(f"freeze_bert {freeze_bert}")
+    print(f"Seed        {args.seed}")
 
     os.makedirs('results', exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    meta_train, meta_test = load_all_splits(args.data_dir)
-    meta_val = None
+    meta_train_all, meta_test = load_all_splits(args.data_dir)
+
+    # --- Tách meta_val ngẫu nhiên theo seed ---
+    all_task_names = list(meta_train_all.keys())
+    random.shuffle(all_task_names)          # seed đã được fix ở trên
+    n_val = max(1, int(len(all_task_names) * args.val_ratio))
+    val_keys   = all_task_names[:n_val]
+    train_keys = all_task_names[n_val:]
+
+    meta_val       = {k: meta_train_all[k] for k in val_keys}
+    meta_train     = {k: meta_train_all[k] for k in train_keys}
+
+    print(f"Val ratio   {args.val_ratio}  →  "
+          f"train={len(meta_train)} tasks, val={len(meta_val)} tasks")
+    print(f"Val tasks   {val_keys}")
+
     all_results = {}
 
     for K_shot in args.shots:

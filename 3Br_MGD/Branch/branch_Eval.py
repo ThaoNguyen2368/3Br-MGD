@@ -13,6 +13,19 @@ from branch_Build import build_model, VARIANT_NAMES, VARIANT_INFO
 from BrMGD_eval import evaluate_meta_task
 from BrMGD_train import create_meta_task
 
+
+def set_seed(seed: int = 42):
+    """Fix tất cả nguồn ngẫu nhiên để đảm bảo test episodes reproducible."""
+    import random
+    import numpy as np
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
 def evaluate_branch(
     protonet,
     meta_test: dict,
@@ -153,7 +166,11 @@ def main():
     parser.add_argument('--test_episodes',   type=int, default=30,
                         help='episode test (default 100)')
     parser.add_argument('--q_query',         type=int, default=128)
+    parser.add_argument('--seed',            type=int, default=42,
+                        help='Random seed for reproducibility')
     args = parser.parse_args()
+
+    set_seed(args.seed)
 
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
@@ -175,6 +192,7 @@ def main():
     print(f"Dataset  : {args.dataset}")
     print(f"Shots    : {args.shots}")
     print(f"Variants : {variants_to_run}")
+    print(f"Seed     : {args.seed}")
 
     os.makedirs('results', exist_ok=True)
 
