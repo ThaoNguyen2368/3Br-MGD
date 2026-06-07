@@ -96,8 +96,7 @@ def atom_features(atom):
         one_of_k_encoding_unk(atom.GetImplicitValence(), [0,1,2,3,4,5,6,7,8,9,10]) + # 11
         [atom.GetIsAromatic()]                                                        # 1
     , dtype=np.float32)  # total = 78
-    s = feat.sum()
-    return feat / s if s != 0 else feat
+    return feat
 
 
 def bond_features(bond):
@@ -147,13 +146,22 @@ class SMILESVocabulary:
     def __init__(self):
         self.tokens = [
             '<PAD>', '<UNK>',
-            # Multi-char atoms
+            # Multi-char atoms (2-char) — must come before single-char to be matched first
             'Cl','Br','Si','si','Se','se','As','as','Te','te',
+            # Heavy metal / bracket atoms missing from original vocab
+            'Al','Mg','Na','Ca','Fe','Li','Ge','Zn','Cu','Au',
+            'Ni','Pd','Pt','Ag','Co','Mn','Cr','Sn','Sb','Pb',
+            'Hg','Cd','In','Tl','Yb','Zr','Ti',
             # Single-char atoms & symbols
             'C','c','N','n','O','o','S','s','P','p','F','I','H','B','b',
+            # Single-char elements not covered by 2-char tokens above
+            'K','V',
+            # Bond / branch / ring symbols
             '[',']','(',')','=','#','+','-',
             '1','2','3','4','5','6','7','8','9','0',
             '@','.','/', '\\','%',
+            # Atom-map separator (used in reaction SMILES: [C:1])
+            ':',
         ]
         self.token_to_idx = {t: i for i, t in enumerate(self.tokens)}
         self.vocab_size   = len(self.tokens)
@@ -291,7 +299,7 @@ def load_task(task_name: str, split: str, data_dir: str) -> dict:
         raise FileNotFoundError(
             f"File not exist: {path}\n"
         )
-    return torch.load(path)
+    return torch.load(path, weights_only=False)
 
 
 def load_all_splits(data_dir: str):

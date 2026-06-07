@@ -1,0 +1,200 @@
+
+=================================================================
+Variant : GINEConv + CNN  |  10-shot
+Dataset : sider  |  K_shot=10
+Tasks   : ['Renal and urinary disorders', 'Pregnancy, puerperium and perinatal conditions', 'Ear and labyrinth disorders', 'Cardiac disorders', 'Nervous system disorders', 'Injury, poisoning and procedural complications']
+Total episodes=6000
+=================================================================
+Task Renal and urinary disorders AUROC: 	0.8356 	AUPRC: 	0.8922
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7872 	AUPRC: 	0.2955
+Task Ear and labyrinth disorders AUROC: 	0.8222 	AUPRC: 	0.7939
+Task Cardiac disorders AUROC: 	0.8375 	AUPRC: 	0.9163
+Task Nervous system disorders AUROC: 	0.9034 	AUPRC: 	0.9904
+Task Injury, poisoning and procedural complications AUROC: 	0.8179 	AUPRC: 	0.8972
+Task Renal and urinary disorders AUROC: 	0.8333 	AUPRC: 	0.8911
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7854 	AUPRC: 	0.288
+Task Ear and labyrinth disorders AUROC: 	0.8221 	AUPRC: 	0.7934
+Task Cardiac disorders AUROC: 	0.835 	AUPRC: 	0.9092
+Task Nervous system disorders AUROC: 	0.9015 	AUPRC: 	0.9902
+Task Injury, poisoning and procedural complications AUROC: 	0.8187 	AUPRC: 	0.8985
+Task Renal and urinary disorders AUROC: 	0.837 	AUPRC: 	0.8928
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7852 	AUPRC: 	0.3007
+Task Ear and labyrinth disorders AUROC: 	0.819 	AUPRC: 	0.7829
+Task Cardiac disorders AUROC: 	0.8377 	AUPRC: 	0.916
+Task Nervous system disorders AUROC: 	0.9078 	AUPRC: 	0.9908
+Task Injury, poisoning and procedural complications AUROC: 	0.8195 	AUPRC: 	0.8977
+Task Renal and urinary disorders AUROC: 	0.8366 	AUPRC: 	0.8928
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7905 	AUPRC: 	0.2957
+Task Ear and labyrinth disorders AUROC: 	0.824 	AUPRC: 	0.7944
+Task Cardiac disorders AUROC: 	0.8362 	AUPRC: 	0.915
+Task Nervous system disorders AUROC: 	0.9101 	AUPRC: 	0.991
+Task Injury, poisoning and procedural complications AUROC: 	0.8166 	AUPRC: 	0.8966
+Task Renal and urinary disorders AUROC: 	0.8345 	AUPRC: 	0.8869
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7918 	AUPRC: 	0.2975
+Task Ear and labyrinth disorders AUROC: 	0.8202 	AUPRC: 	0.7913
+Task Cardiac disorders AUROC: 	0.8358 	AUPRC: 	0.9147
+Task Nervous system disorders AUROC: 	0.9035 	AUPRC: 	0.9904
+Task Injury, poisoning and procedural complications AUROC: 	0.8154 	AUPRC: 	0.8958
+Task Renal and urinary disorders AUROC: 	0.8368 	AUPRC: 	0.8929
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7783 	AUPRC: 	0.2835
+Task Ear and labyrinth disorders AUROC: 	0.8202 	AUPRC: 	0.7903
+Task Cardiac disorders AUROC: 	0.8331 	AUPRC: 	0.9018
+Task Nervous system disorders AUROC: 	0.906 	AUPRC: 	0.9906
+Task Injury, poisoning and procedural complications AUROC: 	0.8179 	AUPRC: 	0.8975
+Task Renal and urinary disorders AUROC: 	0.8375 	AUPRC: 	0.8946
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7835 	AUPRC: 	0.2891
+Task Ear and labyrinth disorders AUROC: 	0.82 	AUPRC: 	0.7738
+Task Cardiac disorders AUROC: 	0.8368 	AUPRC: 	0.9153
+Task Nervous system disorders AUROC: 	0.907 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8176 	AUPRC: 	0.8969
+Task Renal and urinary disorders AUROC: 	0.8362 	AUPRC: 	0.8922
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7937 	AUPRC: 	0.3037
+Task Ear and labyrinth disorders AUROC: 	0.8224 	AUPRC: 	0.7941
+Task Cardiac disorders AUROC: 	0.8368 	AUPRC: 	0.9151
+Task Nervous system disorders AUROC: 	0.9017 	AUPRC: 	0.9902
+Task Injury, poisoning and procedural complications AUROC: 	0.8183 	AUPRC: 	0.8975
+Task Renal and urinary disorders AUROC: 	0.8361 	AUPRC: 	0.8924
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7808 	AUPRC: 	0.2852
+Task Ear and labyrinth disorders AUROC: 	0.8109 	AUPRC: 	0.7309
+Task Cardiac disorders AUROC: 	0.8367 	AUPRC: 	0.9154
+Task Nervous system disorders AUROC: 	0.9082 	AUPRC: 	0.9908
+Task Injury, poisoning and procedural complications AUROC: 	0.8187 	AUPRC: 	0.8975
+Task Renal and urinary disorders AUROC: 	0.8358 	AUPRC: 	0.8929
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7795 	AUPRC: 	0.2911
+Task Ear and labyrinth disorders AUROC: 	0.8219 	AUPRC: 	0.792
+Task Cardiac disorders AUROC: 	0.8374 	AUPRC: 	0.916
+Task Nervous system disorders AUROC: 	0.907 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8159 	AUPRC: 	0.8956
+Task Renal and urinary disorders AUROC: 	0.8413 	AUPRC: 	0.8952
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7873 	AUPRC: 	0.2952
+Task Ear and labyrinth disorders AUROC: 	0.8218 	AUPRC: 	0.7765
+Task Cardiac disorders AUROC: 	0.838 	AUPRC: 	0.916
+Task Nervous system disorders AUROC: 	0.9048 	AUPRC: 	0.9905
+Task Injury, poisoning and procedural complications AUROC: 	0.8195 	AUPRC: 	0.8945
+Task Renal and urinary disorders AUROC: 	0.836 	AUPRC: 	0.8928
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7958 	AUPRC: 	0.2984
+Task Ear and labyrinth disorders AUROC: 	0.8188 	AUPRC: 	0.7783
+Task Cardiac disorders AUROC: 	0.8341 	AUPRC: 	0.909
+Task Nervous system disorders AUROC: 	0.9049 	AUPRC: 	0.9905
+Task Injury, poisoning and procedural complications AUROC: 	0.8189 	AUPRC: 	0.8981
+Task Renal and urinary disorders AUROC: 	0.838 	AUPRC: 	0.8935
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7791 	AUPRC: 	0.3023
+Task Ear and labyrinth disorders AUROC: 	0.8216 	AUPRC: 	0.7967
+Task Cardiac disorders AUROC: 	0.8389 	AUPRC: 	0.9155
+Task Nervous system disorders AUROC: 	0.9054 	AUPRC: 	0.9906
+Task Injury, poisoning and procedural complications AUROC: 	0.8132 	AUPRC: 	0.8938
+Task Renal and urinary disorders AUROC: 	0.8389 	AUPRC: 	0.8944
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7902 	AUPRC: 	0.2401
+Task Ear and labyrinth disorders AUROC: 	0.8211 	AUPRC: 	0.7914
+Task Cardiac disorders AUROC: 	0.836 	AUPRC: 	0.9145
+Task Nervous system disorders AUROC: 	0.9068 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8179 	AUPRC: 	0.8972
+Task Renal and urinary disorders AUROC: 	0.8369 	AUPRC: 	0.8932
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.791 	AUPRC: 	0.3011
+Task Ear and labyrinth disorders AUROC: 	0.8202 	AUPRC: 	0.7767
+Task Cardiac disorders AUROC: 	0.8366 	AUPRC: 	0.9148
+Task Nervous system disorders AUROC: 	0.9073 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8188 	AUPRC: 	0.8976
+Task Renal and urinary disorders AUROC: 	0.8357 	AUPRC: 	0.8924
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7834 	AUPRC: 	0.2931
+Task Ear and labyrinth disorders AUROC: 	0.8218 	AUPRC: 	0.7918
+Task Cardiac disorders AUROC: 	0.8369 	AUPRC: 	0.9153
+Task Nervous system disorders AUROC: 	0.9075 	AUPRC: 	0.9908
+Task Injury, poisoning and procedural complications AUROC: 	0.8174 	AUPRC: 	0.8973
+Task Renal and urinary disorders AUROC: 	0.8347 	AUPRC: 	0.8917
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7829 	AUPRC: 	0.3275
+Task Ear and labyrinth disorders AUROC: 	0.8204 	AUPRC: 	0.7911
+Task Cardiac disorders AUROC: 	0.8375 	AUPRC: 	0.9154
+Task Nervous system disorders AUROC: 	0.9089 	AUPRC: 	0.9909
+Task Injury, poisoning and procedural complications AUROC: 	0.8183 	AUPRC: 	0.8974
+Task Renal and urinary disorders AUROC: 	0.8364 	AUPRC: 	0.8924
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.784 	AUPRC: 	0.2796
+Task Ear and labyrinth disorders AUROC: 	0.8216 	AUPRC: 	0.7922
+Task Cardiac disorders AUROC: 	0.836 	AUPRC: 	0.9147
+Task Nervous system disorders AUROC: 	0.9074 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8155 	AUPRC: 	0.8961
+Task Renal and urinary disorders AUROC: 	0.835 	AUPRC: 	0.8917
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7786 	AUPRC: 	0.2768
+Task Ear and labyrinth disorders AUROC: 	0.8235 	AUPRC: 	0.794
+Task Cardiac disorders AUROC: 	0.8373 	AUPRC: 	0.9151
+Task Nervous system disorders AUROC: 	0.9071 	AUPRC: 	0.9907
+Task Injury, poisoning and procedural complications AUROC: 	0.8188 	AUPRC: 	0.8947
+Task Renal and urinary disorders AUROC: 	0.8361 	AUPRC: 	0.8926
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7771 	AUPRC: 	0.2726
+Task Ear and labyrinth disorders AUROC: 	0.8206 	AUPRC: 	0.7908
+Task Cardiac disorders AUROC: 	0.8357 	AUPRC: 	0.9146
+Task Nervous system disorders AUROC: 	0.9087 	AUPRC: 	0.9909
+Task Injury, poisoning and procedural complications AUROC: 	0.8172 	AUPRC: 	0.8967
+Task Renal and urinary disorders AUROC: 	0.8388 	AUPRC: 	0.8948
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7836 	AUPRC: 	0.2829
+Task Ear and labyrinth disorders AUROC: 	0.8193 	AUPRC: 	0.7747
+Task Cardiac disorders AUROC: 	0.8376 	AUPRC: 	0.9154
+Task Nervous system disorders AUROC: 	0.9039 	AUPRC: 	0.9904
+Task Injury, poisoning and procedural complications AUROC: 	0.8185 	AUPRC: 	0.893
+Task Renal and urinary disorders AUROC: 	0.8347 	AUPRC: 	0.887
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7894 	AUPRC: 	0.2977
+Task Ear and labyrinth disorders AUROC: 	0.821 	AUPRC: 	0.7921
+Task Cardiac disorders AUROC: 	0.8379 	AUPRC: 	0.9159
+Task Nervous system disorders AUROC: 	0.9103 	AUPRC: 	0.991
+Task Injury, poisoning and procedural complications AUROC: 	0.8184 	AUPRC: 	0.8922
+Task Renal and urinary disorders AUROC: 	0.8361 	AUPRC: 	0.8924
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7908 	AUPRC: 	0.3036
+Task Ear and labyrinth disorders AUROC: 	0.8222 	AUPRC: 	0.7934
+Task Cardiac disorders AUROC: 	0.8362 	AUPRC: 	0.9147
+Task Nervous system disorders AUROC: 	0.9046 	AUPRC: 	0.9905
+Task Injury, poisoning and procedural complications AUROC: 	0.8169 	AUPRC: 	0.8967
+Task Renal and urinary disorders AUROC: 	0.836 	AUPRC: 	0.8933
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7785 	AUPRC: 	0.2923
+Task Ear and labyrinth disorders AUROC: 	0.8193 	AUPRC: 	0.7704
+Task Cardiac disorders AUROC: 	0.836 	AUPRC: 	0.9148
+Task Nervous system disorders AUROC: 	0.9094 	AUPRC: 	0.9912
+Task Injury, poisoning and procedural complications AUROC: 	0.8164 	AUPRC: 	0.8934
+Task Renal and urinary disorders AUROC: 	0.8365 	AUPRC: 	0.8932
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7781 	AUPRC: 	0.2516
+Task Ear and labyrinth disorders AUROC: 	0.8238 	AUPRC: 	0.7982
+Task Cardiac disorders AUROC: 	0.835 	AUPRC: 	0.9065
+Task Nervous system disorders AUROC: 	0.9086 	AUPRC: 	0.9909
+Task Injury, poisoning and procedural complications AUROC: 	0.815 	AUPRC: 	0.8956
+Task Renal and urinary disorders AUROC: 	0.8379 	AUPRC: 	0.8961
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.8034 	AUPRC: 	0.3166
+Task Ear and labyrinth disorders AUROC: 	0.8191 	AUPRC: 	0.7868
+Task Cardiac disorders AUROC: 	0.838 	AUPRC: 	0.9162
+Task Nervous system disorders AUROC: 	0.9028 	AUPRC: 	0.9903
+Task Injury, poisoning and procedural complications AUROC: 	0.8159 	AUPRC: 	0.8962
+Task Renal and urinary disorders AUROC: 	0.8375 	AUPRC: 	0.8937
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7923 	AUPRC: 	0.3047
+Task Ear and labyrinth disorders AUROC: 	0.8215 	AUPRC: 	0.7918
+Task Cardiac disorders AUROC: 	0.8347 	AUPRC: 	0.9091
+Task Nervous system disorders AUROC: 	0.9059 	AUPRC: 	0.9906
+Task Injury, poisoning and procedural complications AUROC: 	0.8193 	AUPRC: 	0.8979
+Task Renal and urinary disorders AUROC: 	0.8352 	AUPRC: 	0.8919
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7958 	AUPRC: 	0.3158
+Task Ear and labyrinth disorders AUROC: 	0.8042 	AUPRC: 	0.7134
+Task Cardiac disorders AUROC: 	0.8386 	AUPRC: 	0.9161
+Task Nervous system disorders AUROC: 	0.9103 	AUPRC: 	0.9911
+Task Injury, poisoning and procedural complications AUROC: 	0.8191 	AUPRC: 	0.8987
+Task Renal and urinary disorders AUROC: 	0.834 	AUPRC: 	0.8912
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7929 	AUPRC: 	0.3051
+Task Ear and labyrinth disorders AUROC: 	0.8242 	AUPRC: 	0.7945
+Task Cardiac disorders AUROC: 	0.8378 	AUPRC: 	0.9159
+Task Nervous system disorders AUROC: 	0.9096 	AUPRC: 	0.991
+Task Injury, poisoning and procedural complications AUROC: 	0.8104 	AUPRC: 	0.8947
+Task Renal and urinary disorders AUROC: 	0.8356 	AUPRC: 	0.8924
+Task Pregnancy, puerperium and perinatal conditions AUROC: 	0.7832 	AUPRC: 	0.2901
+Task Ear and labyrinth disorders AUROC: 	0.8191 	AUPRC: 	0.7816
+Task Cardiac disorders AUROC: 	0.8369 	AUPRC: 	0.9149
+Task Nervous system disorders AUROC: 	0.9087 	AUPRC: 	0.9909
+Task Injury, poisoning and procedural complications AUROC: 	0.8188 	AUPRC: 	0.8984
+
+-----------------------------------------------------------------
+Task                                            Acc         F1      AUROC      AUPRC  (mean±std)
+-----------------------------------------------------------------
+Renal and urinary disorders              0.7489±0.0279  0.7923±0.0339  0.8347±0.0272  0.8912±0.0182
+Pregnancy, puerperium and perinatal conditions 0.6555±0.0718  0.2669±0.0280  0.7814±0.0452  0.2872±0.0292
+Ear and labyrinth disorders              0.7384±0.0193  0.7312±0.0190  0.8202±0.0212  0.7880±0.0207
+Cardiac disorders                        0.7560±0.0246  0.8104±0.0273  0.8363±0.0051  0.9139±0.0043
+Nervous system disorders                 0.7642±0.0380  0.8542±0.0272  0.9069±0.0033  0.9907±0.0004
+Injury, poisoning and procedural complications 0.7368±0.0328  0.7868±0.0384  0.8159±0.0322  0.8955±0.0212
+
+OVERALL AVERAGE                          0.7333              0.7070              0.8326              0.7944
+-----------------------------------------------------------------

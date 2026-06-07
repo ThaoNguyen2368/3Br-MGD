@@ -4,127 +4,127 @@
       "n_positive": 1006,
       "n_negative": 421,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Infections_and_infestations.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Infections_and_infestations.pt"
     },
     "Neoplasms benign, malignant and unspecified (incl cysts and polyps)": {
       "n_positive": 376,
       "n_negative": 1051,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Neoplasms_benign_malignant_and_unspecified_incl_cysts_and_polyps.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Neoplasms_benign_malignant_and_unspecified_incl_cysts_and_polyps.pt"
     },
     "Blood and lymphatic system disorders": {
       "n_positive": 885,
       "n_negative": 542,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Blood_and_lymphatic_system_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Blood_and_lymphatic_system_disorders.pt"
     },
     "Immune system disorders": {
       "n_positive": 1024,
       "n_negative": 403,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Immune_system_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Immune_system_disorders.pt"
     },
     "Endocrine disorders": {
       "n_positive": 323,
       "n_negative": 1104,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Endocrine_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Endocrine_disorders.pt"
     },
     "Psychiatric disorders": {
       "n_positive": 1016,
       "n_negative": 411,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Psychiatric_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Psychiatric_disorders.pt"
     },
     "Eye disorders": {
       "n_positive": 876,
       "n_negative": 551,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Eye_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Eye_disorders.pt"
     },
     "Vascular disorders": {
       "n_positive": 1108,
       "n_negative": 319,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Vascular_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Vascular_disorders.pt"
     },
     "Respiratory, thoracic and mediastinal disorders": {
       "n_positive": 1060,
       "n_negative": 367,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Respiratory_thoracic_and_mediastinal_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Respiratory_thoracic_and_mediastinal_disorders.pt"
     },
     "Hepatobiliary disorders": {
       "n_positive": 743,
       "n_negative": 684,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Hepatobiliary_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Hepatobiliary_disorders.pt"
     },
     "Musculoskeletal and connective tissue disorders": {
       "n_positive": 997,
       "n_negative": 430,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Musculoskeletal_and_connective_tissue_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Musculoskeletal_and_connective_tissue_disorders.pt"
     },
     "Reproductive system and breast disorders": {
       "n_positive": 727,
       "n_negative": 700,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Reproductive_system_and_breast_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Reproductive_system_and_breast_disorders.pt"
     },
     "Congenital, familial and genetic disorders": {
       "n_positive": 253,
       "n_negative": 1174,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Congenital_familial_and_genetic_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Congenital_familial_and_genetic_disorders.pt"
     },
     "General disorders and administration site conditions": {
       "n_positive": 1292,
       "n_negative": 135,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\General_disorders_and_administration_site_conditions.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/General_disorders_and_administration_site_conditions.pt"
     },
     "Investigations": {
       "n_positive": 1151,
       "n_negative": 276,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Investigations.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Investigations.pt"
     },
     "Surgical and medical procedures": {
       "n_positive": 213,
       "n_negative": 1214,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Surgical_and_medical_procedures.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Surgical_and_medical_procedures.pt"
     },
     "Social circumstances": {
       "n_positive": 251,
       "n_negative": 1176,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Social_circumstances.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Social_circumstances.pt"
     },
     "Product issues": {
       "n_positive": 22,
       "n_negative": 1405,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Product_issues.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Product_issues.pt"
     },
     "Metabolism and nutrition disorders": {
       "n_positive": 996,
       "n_negative": 431,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Metabolism_and_nutrition_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Metabolism_and_nutrition_disorders.pt"
     },
     "Gastrointestinal disorders": {
       "n_positive": 1298,
       "n_negative": 129,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Gastrointestinal_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Gastrointestinal_disorders.pt"
     },
     "Skin and subcutaneous tissue disorders": {
       "n_positive": 1318,
       "n_negative": 109,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_train\\Skin_and_subcutaneous_tissue_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_train/Skin_and_subcutaneous_tissue_disorders.pt"
     }
   },
   "meta_test": {
@@ -132,37 +132,37 @@
       "n_positive": 911,
       "n_negative": 516,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Renal_and_urinary_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Renal_and_urinary_disorders.pt"
     },
     "Pregnancy, puerperium and perinatal conditions": {
       "n_positive": 125,
       "n_negative": 1302,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Pregnancy_puerperium_and_perinatal_conditions.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Pregnancy_puerperium_and_perinatal_conditions.pt"
     },
     "Ear and labyrinth disorders": {
       "n_positive": 659,
       "n_negative": 768,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Ear_and_labyrinth_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Ear_and_labyrinth_disorders.pt"
     },
     "Cardiac disorders": {
       "n_positive": 988,
       "n_negative": 439,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Cardiac_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Cardiac_disorders.pt"
     },
     "Nervous system disorders": {
       "n_positive": 1304,
       "n_negative": 123,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Nervous_system_disorders.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Nervous_system_disorders.pt"
     },
     "Injury, poisoning and procedural complications": {
       "n_positive": 946,
       "n_negative": 481,
       "n_total": 1427,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\sider\\processed\\meta_test\\Injury_poisoning_and_procedural_complications.pt"
+      "save_path": "3Br_MGD/Data/sider/processed/meta_test/Injury_poisoning_and_procedural_complications.pt"
     }
   }
 }

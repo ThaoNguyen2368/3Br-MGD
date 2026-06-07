@@ -1,0 +1,1979 @@
+FS-GNNConv/data.py:
+"""
+---------------------------------------------------------------------------------------
+Code Implementation to pre-process the data and perform the transformation of SMILES
+strings into molecular graphs using RDKit.Chem.
+
+This code is based on Strategies for Pre-training Graph Neural Networks of Hu et al.
+Paper: Hu, W., Liu, B., Gomes, J., Zitnik, M., Liang, P., Pande, V., Leskovec, J.:
+Strategies for Pre-training Graph Neural Networks. arXiv (2019). 
+https://arxiv.org/abs/1905.12265
+---------------------------------------------------------------------------------------
+"""
+
+import os
+import sys
+import torch
+import pickle
+import collections
+import math
+import pandas as pd
+import numpy as np
+import networkx as nx
+from rdkit import Chem
+from rdkit.Chem import Descriptors
+from rdkit.Chem import AllChem
+from rdkit import DataStructs
+from rdkit.Chem.rdMolDescriptors import GetMorganFingerprintAsBitVect
+from torch.utils import data
+from torch_geometric.data import Data
+from torch_geometric.data import InMemoryDataset
+from torch_geometric.data import Batch
+from itertools import repeat, product, chain
+import torch
+import random
+
+allowable_features = {
+    'possible_atomic_num_list' : list(range(1, 119)),
+    'possible_formal_charge_list' : [-5, -4, -3, -2, -1, 0, 1, 2, 3, 4, 5],
+    'possible_chirality_list' : [
+        Chem.rdchem.ChiralType.CHI_UNSPECIFIED,
+        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CW,
+        Chem.rdchem.ChiralType.CHI_TETRAHEDRAL_CCW,
+        Chem.rdchem.ChiralType.CHI_OTHER
+    ],
+    'possible_hybridization_list' : [
+        Chem.rdchem.HybridizationType.S,
+        Chem.rdchem.HybridizationType.SP, Chem.rdchem.HybridizationType.SP2,
+        Chem.rdchem.HybridizationType.SP3, Chem.rdchem.HybridizationType.SP3D,
+        Chem.rdchem.HybridizationType.SP3D2, Chem.rdchem.HybridizationType.UNSPECIFIED
+    ],
+    'possible_numH_list' : [0, 1, 2, 3, 4, 5, 6, 7, 8],
+    'possible_implicit_valence_list' : [0, 1, 2, 3, 4, 5, 6],
+    'possible_degree_list' : [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    'possible_bonds' : [
+        Chem.rdchem.BondType.SINGLE,
+        Chem.rdchem.BondType.DOUBLE,
+        Chem.rdchem.BondType.TRIPLE,
+        Chem.rdchem.BondType.AROMATIC
+    ],
+    'possible_bond_dirs' : [ # only for double bond stereo information
+        Chem.rdchem.BondDir.NONE,
+        Chem.rdchem.BondDir.ENDUPRIGHT,
+        Chem.rdchem.BondDir.ENDDOWNRIGHT
+    ]
+}
+
+def datasets(data):
+    if data == "tox21":
+        return [[6956, 309],[6521, 237],[5781, 768],[5521, 300],[5400, 793],[6605, 350],[6264, 186],[4890, 942],[6808, 264],[6095, 372],[4892, 918],[6351, 423]]
+    elif data == "sider":       
+        return [[684, 743],[431, 996],[1405, 22],[551, 876],[276, 1151],[430, 997],[129, 1298],[1176, 281],[403, 1024],[700, 727],[1051, 376],[135, 1292],[1104, 323],[1214, 213],[319, 1108],[542, 885],[109, 1318],[1174, 253],[421, 1006],[367, 1060],[411, 1016],[516, 911],[1302, 125],[768, 659],[439, 988],[123, 1304],[481, 946]]
+    elif data == "muv":
+        return [[14814, 27], [14705, 29], [14698, 30], [14593, 30], [14873, 29], [14572, 29], [14614, 30], [14383, 28], [14807, 29], [14654, 28], [14662, 29], [14615, 29], [14637, 30], [14681, 30], [14622, 29], [14745, 29], [14722, 24]]
+
+def random_sampler(D, d, t, k, n, train):
+    
+    data = datasets(d)
+    
+    s_pos = random.sample(range(0,data[t][0]), k)
+    s_neg = random.sample(range(data[t][0],len(D)), k)
+    s = s_pos + s_neg
+    random.shuffle(s)
+
+    samples = [i for i in range(0, len(D)) if i not in s]
+    
+    if train == True:     
+        q = random.sample(samples, n)
+    else:
+        random.shuffle(samples)
+        q = samples
+
+    S = D[torch.tensor(s)]
+    Q = D[torch.tensor(q)]
+
+    return S, Q
+
+
+def split_into_directories(data):
+
+    root_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(root_dir)
+    file = open(os.path.join(root_dir, 'Data/{}/original/{}.csv'.format(data,data)), 'r').readlines()[1:]
+    np.random.shuffle(file)
+    
+    T = {}
+  
+    if data == "tox21":
+        for k,j  in enumerate(file):
+            sample = j.split(",")
+           
+            for i in range(12):
+                if i not in T:
+                    T[i] = [[],[]]
+                if sample[i] == "0":
+                    T[i][0].append(sample[13].rstrip())
+                elif sample[i] == "1":
+                    T[i][1].append(sample[13].rstrip())
+      
+        for t in T:
+            d = 'Data/' + data + "/pre-processed/" + "task_" +str(t+1)
+            os.makedirs(d, exist_ok=True)
+            os.makedirs(d + "/raw", exist_ok=True)
+            os.makedirs(d + "/processed", exist_ok=True)
+            
+            with open(d + "/raw/" + data + "_task_" + str(t+1), "wb") as fp:   #Pickling
+                pickle.dump(T[t], fp)
+    
+    if data == "sider":
+        for k,j  in enumerate(file):
+            sample = j.split(",")
+            smile = sample[0].rstrip()
+            sample = sample[1:]
+            for i in range(27):
+                
+                if i not in T:
+                    T[i] = [[],[]]
+                if sample[i] == "0" or sample[i] == "0\n":
+                    T[i][0].append(smile)
+                elif sample[i] == "1" or sample[i] == "1\n":
+                    T[i][1].append(smile)
+      
+        for t in T:
+            d = 'Data/' + data + "/pre-processed/" + "task_" +str(t+1)
+            os.makedirs(d, exist_ok=True)
+            os.makedirs(d + "/raw", exist_ok=True)
+            os.makedirs(d + "/processed", exist_ok=True)
+            
+            with open(d + "/raw/" + data + "_task_" + str(t+1), "wb") as fp:   #Pickling
+                pickle.dump(T[t], fp)
+        
+    if data == "muv":
+        for k,j  in enumerate(file):
+            sample = j.split(",")
+           
+            for i in range(17):
+                if i not in T:
+                    T[i] = [[],[]]
+                if sample[i] == "0" or sample[i] == "\"0":
+                    T[i][0].append(sample[18].rstrip())
+                elif sample[i] == "1" or sample[i] == "\"1":
+                    T[i][1].append(sample[18].rstrip())
+      
+        for t in T:
+            d = 'Data/' + data + "/pre-processed/" + "task_" +str(t+1)
+            os.makedirs(d, exist_ok=True)
+            os.makedirs(d + "/raw", exist_ok=True)
+            os.makedirs(d + "/processed", exist_ok=True)
+            
+            with open(d + "/raw/" + data + "_task_" + str(t+1), "wb") as fp:   #Pickling
+                pickle.dump(T[t], fp)
+ 
+            
+        
+
+def mol_to_graph_data_obj_simple(mol):
+    """
+    Converts rdkit mol object to graph Data object required by the pytorch
+    geometric package. NB: Uses simplified atom and bond features, and represent
+    as indices
+    :param mol: rdkit mol object
+    :return: graph data object with the attributes: x, edge_index, edge_attr
+    """
+    # atoms
+    num_atom_features = 2   # atom type,  chirality tag
+    atom_features_list = []
+    for atom in mol.GetAtoms():
+        atom_feature = [allowable_features['possible_atomic_num_list'].index(
+            atom.GetAtomicNum())] + [allowable_features[
+            'possible_chirality_list'].index(atom.GetChiralTag())]
+        atom_features_list.append(atom_feature)
+    x = torch.tensor(np.array(atom_features_list), dtype=torch.long)
+
+    # bonds
+    num_bond_features = 2   # bond type, bond direction
+    if len(mol.GetBonds()) > 0: # mol has bonds
+        edges_list = []
+        edge_features_list = []
+        for bond in mol.GetBonds():
+            i = bond.GetBeginAtomIdx()
+            j = bond.GetEndAtomIdx()
+            edge_feature = [allowable_features['possible_bonds'].index(
+                bond.GetBondType())] + [allowable_features[
+                                            'possible_bond_dirs'].index(
+                bond.GetBondDir())]
+            edges_list.append((i, j))
+            edge_features_list.append(edge_feature)
+            edges_list.append((j, i))
+            edge_features_list.append(edge_feature)
+
+        # data.edge_index: Graph connectivity in COO format with shape [2, num_edges]
+        edge_index = torch.tensor(np.array(edges_list).T, dtype=torch.long)
+
+        # data.edge_attr: Edge feature matrix with shape [num_edges, num_edge_features]
+        edge_attr = torch.tensor(np.array(edge_features_list),
+                                 dtype=torch.long)
+    else:   # mol has no bonds
+        edge_index = torch.empty((2, 0), dtype=torch.long)
+        edge_attr = torch.empty((0, num_bond_features), dtype=torch.long)
+
+    data = Data(x=x, edge_index=edge_index, edge_attr=edge_attr)
+
+    return data
+
+
+class MoleculeDataset(InMemoryDataset):
+    def __init__(self,
+                 root,
+                 #data = None,
+                 #slices = None,
+                 transform=None,
+                 pre_transform=None,
+                 pre_filter=None,
+                 dataset='zinc250k',
+                 empty=False):
+        """
+        Adapted from qm9.py. Disabled the download functionality
+        :param root: directory of the dataset, containing a raw and processed
+        dir. The raw dir should contain the file containing the smiles, and the
+        processed dir can either empty or a previously processed file
+        :param dataset: name of the dataset. Currently only implemented for
+        zinc250k, chembl_with_labels, tox21, hiv, bace, bbbp, clintox, esol,
+        freesolv, lipophilicity, muv, pcba, sider, toxcast
+        :param empty: if True, then will not load any data obj. For
+        initializing empty dataset
+        """
+        self.dataset = dataset
+        self.root = root
+
+        super(MoleculeDataset, self).__init__(root, transform, pre_transform, pre_filter)
+        self.transform, self.pre_transform, self.pre_filter = transform, pre_transform, pre_filter
+
+        if not empty:
+            self.data, self.slices = torch.load(self.processed_paths[0])
+
+
+    def get(self, idx):
+        data = Data()
+        for key in self.data.keys:
+            item, slices = self.data[key], self.slices[key]
+            s = list(repeat(slice(None), item.dim()))
+            s[data.__cat_dim__(key, item)] = slice(slices[idx],
+                                                    slices[idx + 1])
+            data[key] = item[s]
+        return data
+
+
+    @property
+    def raw_file_names(self):
+        file_name_list = os.listdir(self.raw_dir)
+        return file_name_list
+
+    @property
+    def processed_file_names(self):
+        return 'geometric_data_processed.pt'
+
+    def download(self):
+        raise NotImplementedError('Must indicate valid location of raw data. '
+                                  'No download allowed')
+
+    def process(self):
+        data_smiles_list = []
+        data_list = []
+        if self.dataset == 'tox21':
+            smiles_list, rdkit_mol_objs, labels = \
+                _load_tox21_dataset(self.raw_paths[0])
+            for i in range(len(smiles_list)):
+                print(i)
+                rdkit_mol = rdkit_mol_objs[i]
+                data = mol_to_graph_data_obj_simple(rdkit_mol)
+                # manually add mol id
+                data.id = torch.tensor(
+                    [i])  # id here is the index of the mol in
+                # the dataset
+                data.y = torch.tensor(labels[i, :])
+                data_list.append(data)
+                data_smiles_list.append(smiles_list[i])
+
+        elif self.dataset == 'sider':
+            smiles_list, rdkit_mol_objs, labels = \
+                _load_sider_dataset(self.raw_paths[0])
+            for i in range(len(smiles_list)):
+                print(i)
+                rdkit_mol = rdkit_mol_objs[i]
+                data = mol_to_graph_data_obj_simple(rdkit_mol)
+                # manually add mol id
+                data.id = torch.tensor(
+                    [i])  # id here is the index of the mol in
+                # the dataset
+                data.y = torch.tensor(labels[i, :])
+                data_list.append(data)
+                data_smiles_list.append(smiles_list[i])
+                
+        elif self.dataset == 'muv':
+             smiles_list, rdkit_mol_objs, labels = \
+                 _load_muv_dataset(self.raw_paths[0])
+             for i in range(len(smiles_list)):
+                 print(i)
+                 rdkit_mol = rdkit_mol_objs[i]
+                 data = mol_to_graph_data_obj_simple(rdkit_mol)
+                 # manually add mol id
+                 data.id = torch.tensor(
+                     [i])  # id here is the index of the mol in
+                 # the dataset
+                 data.y = torch.tensor(labels[i, :])
+                 data_list.append(data)
+                 data_smiles_list.append(smiles_list[i])
+
+
+        else:
+            raise ValueError('Invalid dataset name')
+
+        if self.pre_filter is not None:
+            data_list = [data for data in data_list if self.pre_filter(data)]
+
+        if self.pre_transform is not None:
+            data_list = [self.pre_transform(data) for data in data_list]
+
+        data_smiles_series = pd.Series(data_smiles_list)
+        data_smiles_series.to_csv(os.path.join(self.processed_dir,
+                                               'processed.csv'), index=False,
+                                  header=False)
+
+        data, slices = self.collate(data_list)
+        torch.save((data, slices), self.processed_paths[0])
+
+
+def merge_dataset_objs(dataset_1, dataset_2):
+    """
+    Naively merge 2 molecule dataset objects, and ignore identities of
+    molecules. Assumes both datasets have multiple y labels, and will pad
+    accordingly. ie if dataset_1 has obj_1 with y dim 1310 and dataset_2 has
+    obj_2 with y dim 128, then the resulting obj_1 and obj_2 will have dim
+    1438, where obj_1 have the last 128 cols with 0, and obj_2 have
+    the first 1310 cols with 0.
+    :return: pytorch geometric dataset obj, with the x, edge_attr, edge_index,
+    new y attributes only
+    """
+    d_1_y_dim = dataset_1[0].y.size()[0]
+    d_2_y_dim = dataset_2[0].y.size()[0]
+
+    data_list = []
+    # keep only x, edge_attr, edge_index, padded_y then append
+    for d in dataset_1:
+        old_y = d.y
+        new_y = torch.cat([old_y, torch.zeros(d_2_y_dim, dtype=torch.long)])
+        data_list.append(Data(x=d.x, edge_index=d.edge_index,
+                              edge_attr=d.edge_attr, y=new_y))
+
+    for d in dataset_2:
+        old_y = d.y
+        new_y = torch.cat([torch.zeros(d_1_y_dim, dtype=torch.long), old_y.long()])
+        data_list.append(Data(x=d.x, edge_index=d.edge_index,
+                              edge_attr=d.edge_attr, y=new_y))
+
+    # create 'empty' dataset obj. Just randomly pick a dataset and root path
+    # that has already been processed
+    new_dataset = MoleculeDataset(root='dataset/chembl_with_labels',
+                                  dataset='chembl_with_labels', empty=True)
+    # collate manually
+    new_dataset.data, new_dataset.slices = new_dataset.collate(data_list)
+
+    return new_dataset
+
+def create_circular_fingerprint(mol, radius, size, chirality):
+    """
+    :param mol:
+    :param radius:
+    :param size:
+    :param chirality:
+    :return: np array of morgan fingerprint
+    """
+    fp = GetMorganFingerprintAsBitVect(mol, radius,
+                                       nBits=size, useChirality=chirality)
+    return np.array(fp)
+
+
+def _load_tox21_dataset(input_path):
+    """
+    :param input_path:
+    :return: list of smiles, list of rdkit mol obj, np.array containing the
+    labels
+    """
+    with open(input_path, 'rb') as f:
+       binary_list = pickle.load(f)
+
+    print(binary_list)
+    smiles_list = []
+    for l in binary_list:
+        for i in l:
+            smiles_list.append(i)
+    rdkit_mol_objs_list = [AllChem.MolFromSmiles(s) for s in smiles_list]
+    labels = np.zeros((len(smiles_list),1), dtype=int)
+    labels[len(binary_list[0]):,0] = 1 
+
+    return smiles_list, rdkit_mol_objs_list, labels
+
+def _load_muv_dataset(input_path):
+    """
+    :param input_path:
+    :return: list of smiles, list of rdkit mol obj, np.array containing the
+    labels
+    """
+    with open(input_path, 'rb') as f:
+       binary_list = pickle.load(f)
+
+    print(binary_list)
+  
+    smiles_list = []
+    for l in binary_list:
+        for i in l:
+            smiles_list.append(i[:-1])
+    
+    rdkit_mol_objs_list = []
+    for s in smiles_list:
+        rdkit_mol_objs_list.append(Chem.MolFromSmiles(s))
+        
+    labels = np.zeros((len(smiles_list),1), dtype=int)
+    labels[len(binary_list[0]):,0] = 1 
+    
+    
+
+    return smiles_list, rdkit_mol_objs_list, labels
+
+def _load_sider_dataset(input_path):
+    """
+    :param input_path:
+    :return: list of smiles, list of rdkit mol obj, np.array containing the
+    labels
+    """
+
+    with open(input_path, 'rb') as f:
+       binary_list = pickle.load(f)
+
+    print(binary_list)
+    smiles_list = []
+    for l in binary_list:
+        for i in l:
+            smiles_list.append(i)
+    rdkit_mol_objs_list = [AllChem.MolFromSmiles(s) for s in smiles_list]
+    labels = np.zeros((len(smiles_list),1), dtype=int)
+    labels[len(binary_list[0]):,0] = 1 
+
+    return smiles_list, rdkit_mol_objs_list, labels
+
+
+def check_smiles_validity(smiles):
+    try:
+        m = Chem.MolFromSmiles(smiles)
+        if m:
+            return True
+        else:
+            return False
+    except:
+        return False
+
+def split_rdkit_mol_obj(mol):
+    """
+    Split rdkit mol object containing multiple species or one species into a
+    list of mol objects or a list containing a single object respectively
+    :param mol:
+    :return:
+    """
+    smiles = AllChem.MolToSmiles(mol, isomericSmiles=True)
+    smiles_list = smiles.split('.')
+    mol_species_list = []
+    for s in smiles_list:
+        if check_smiles_validity(s):
+            mol_species_list.append(AllChem.MolFromSmiles(s))
+    return mol_species_list
+
+def get_largest_mol(mol_list):
+    """
+    Given a list of rdkit mol objects, returns mol object containing the
+    largest num of atoms. If multiple containing largest num of atoms,
+    picks the first one
+    :param mol_list:
+    :return:
+    """
+    num_atoms_list = [len(m.GetAtoms()) for m in mol_list]
+    largest_mol_idx = num_atoms_list.index(max(num_atoms_list))
+    return mol_list[largest_mol_idx]
+
+def dataset(data):
+    root = "Data/" + data + "/pre-processed/"
+    T = 17
+    if data == "sider":
+        T = 27
+    elif data == "tox21":
+        T = 12
+    elif data == "muv":
+        T = 27
+
+    for task in range(T):
+        build = MoleculeDataset(root + "task_" + str(task+1), dataset=data)
+
+if __name__ == "__main__":
+    # split data in mutiple data directories and convert to RDKit.Chem graph structures
+    #split_into_directories("muv")
+    dataset("muv")
+
+FS-GNNConv/gnn_models.py
+"""
+---------------------------------------------------------------------------------------
+Code Implementation of graph-based baselines - GIN, GCN and GraphSAGE.
+
+This code is based on Strategies for Pre-training Graph Neural Networks of Hu et al.
+Paper: Hu, W., Liu, B., Gomes, J., Zitnik, M., Liang, P., Pande, V., Leskovec, J.:
+Strategies for Pre-training Graph Neural Networks. arXiv (2019). 
+https://arxiv.org/abs/1905.12265
+---------------------------------------------------------------------------------------
+"""
+
+import torch
+import torch_geometric.nn as gnn
+from torch_geometric.nn import MessagePassing
+from torch_geometric.utils import add_self_loops, softmax
+import torch.nn.functional as F
+from torch_scatter import scatter_add
+from torch_geometric.nn.inits import glorot, zeros
+
+
+num_atom_type = 120 #including the extra mask tokens
+num_chirality_tag = 3
+
+num_bond_type = 6 #including aromatic and self-loop edge, and extra masked tokens
+num_bond_direction = 3 
+
+
+class GINConv(MessagePassing):
+    
+    def __init__(self, emb_dim, aggr = "add"):
+        super(GINConv, self).__init__()
+        #multi-layer perceptron to introduce non-linearity
+        self.mlp = torch.nn.Sequential(torch.nn.Linear(emb_dim, 2*emb_dim), torch.nn.ReLU(), torch.nn.Linear(2*emb_dim, emb_dim))
+        self.edge_embedding1 = torch.nn.Embedding(num_bond_type, emb_dim)
+        self.edge_embedding2 = torch.nn.Embedding(num_bond_direction, emb_dim)
+
+        torch.nn.init.xavier_uniform_(self.edge_embedding1.weight.data)
+        torch.nn.init.xavier_uniform_(self.edge_embedding2.weight.data)
+        self.aggr = aggr
+
+    def forward(self, x, edge_index, edge_attr):
+        #self loops are added into the embedding space
+        edge_index = add_self_loops(edge_index, num_nodes = x.size(0))[0]
+
+        #add self-loop edge features
+        self_loop_attr = torch.zeros(x.size(0), 2)
+        self_loop_attr[:,0] = 4 #bond type of a self-loop edge
+        self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
+        edge_attr = torch.cat((edge_attr, self_loop_attr), dim = 0)
+
+        edge_embeddings = self.edge_embedding1(edge_attr[:,0]) + self.edge_embedding2(edge_attr[:,1])
+
+        return self.propagate(edge_index, x=x, edge_attr=edge_embeddings)
+
+    def message(self, x_j, edge_attr):
+        return x_j + edge_attr
+
+    def update(self, aggr_out):
+        return self.mlp(aggr_out)
+
+
+class GCNConv(MessagePassing):
+    
+    def __init__(self, emb_dim, aggr = "add"):
+        super(GCNConv, self).__init__()
+
+        self.emb_dim = emb_dim
+        self.linear = torch.nn.Linear(emb_dim, emb_dim)
+        self.edge_embedding1 = torch.nn.Embedding(num_bond_type, emb_dim)
+        self.edge_embedding2 = torch.nn.Embedding(num_bond_direction, emb_dim)
+
+        torch.nn.init.xavier_uniform_(self.edge_embedding1.weight.data)
+        torch.nn.init.xavier_uniform_(self.edge_embedding2.weight.data)
+
+        self.aggr = aggr
+
+    def norm(self, edge_index, num_nodes, dtype):
+        ### assuming that self-loops have been already added in edge_index
+        edge_weight = torch.ones((edge_index.size(1), ), dtype=dtype,
+                                     device=edge_index.device)
+        row, col = edge_index
+        deg = scatter_add(edge_weight, row, dim=0, dim_size=num_nodes)
+        deg_inv_sqrt = deg.pow(-0.5)
+        deg_inv_sqrt[deg_inv_sqrt == float('inf')] = 0
+
+        return deg_inv_sqrt[row] * edge_weight * deg_inv_sqrt[col]
+
+
+    def forward(self, x, edge_index, edge_attr):
+        #add self loops in the edge space
+        edge_index = add_self_loops(edge_index, num_nodes = x.size(0))[0]
+
+        #add features corresponding to self-loop edges.
+        self_loop_attr = torch.zeros(x.size(0), 2)
+        self_loop_attr[:,0] = 4 #bond type for self-loop edge
+        self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
+        edge_attr = torch.cat((edge_attr, self_loop_attr), dim = 0)
+
+        edge_embeddings = self.edge_embedding1(edge_attr[:,0]) + self.edge_embedding2(edge_attr[:,1])
+
+        norm = self.norm(edge_index, x.size(0), x.dtype)
+
+        x = self.linear(x)
+
+        return self.propagate(edge_index, x=x, edge_attr=edge_embeddings, norm = norm)
+
+    def message(self, x_j, edge_attr, norm):
+        return norm.view(-1, 1) * (x_j + edge_attr)
+
+
+class GATConv(MessagePassing):
+    def __init__(self, emb_dim, heads=2, negative_slope=0.2, aggr = "add"):
+        super(GATConv, self).__init__()
+
+        self.aggr = aggr
+
+        self.emb_dim = emb_dim
+        self.heads = heads
+        self.negative_slope = negative_slope
+
+        self.weight_linear = torch.nn.Linear(emb_dim, heads * emb_dim)
+        self.att = torch.nn.Parameter(torch.Tensor(1, heads, 2 * emb_dim))
+
+        self.bias = torch.nn.Parameter(torch.Tensor(emb_dim))
+
+        self.edge_embedding1 = torch.nn.Embedding(num_bond_type, heads * emb_dim)
+        self.edge_embedding2 = torch.nn.Embedding(num_bond_direction, heads * emb_dim)
+
+        torch.nn.init.xavier_uniform_(self.edge_embedding1.weight.data)
+        torch.nn.init.xavier_uniform_(self.edge_embedding2.weight.data)
+
+        self.reset_parameters()
+
+    def reset_parameters(self):
+        glorot(self.att)
+        zeros(self.bias)
+
+    def forward(self, x, edge_index, edge_attr):
+
+        #add self loops in the edge space
+        edge_index = add_self_loops(edge_index, num_nodes = x.size(0))
+
+        #add features corresponding to self-loop edges.
+        self_loop_attr = torch.zeros(x.size(0), 2)
+        self_loop_attr[:,0] = 4 #bond type for self-loop edge
+        self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
+        edge_attr = torch.cat((edge_attr, self_loop_attr), dim = 0)
+
+        edge_embeddings = self.edge_embedding1(edge_attr[:,0]) + self.edge_embedding2(edge_attr[:,1])
+
+        x = self.weight_linear(x).view(-1, self.heads, self.emb_dim)
+        return self.propagate(self.aggr, edge_index, x=x, edge_attr=edge_embeddings)
+
+    def message(self, edge_index, x_i, x_j, edge_attr):
+        edge_attr = edge_attr.view(-1, self.heads, self.emb_dim)
+        x_j += edge_attr
+
+        alpha = (torch.cat([x_i, x_j], dim=-1) * self.att).sum(dim=-1)
+
+        alpha = F.leaky_relu(alpha, self.negative_slope)
+        alpha = softmax(alpha, edge_index[0])
+
+        return x_j * alpha.view(-1, self.heads, 1)
+
+    def update(self, aggr_out):
+        aggr_out = aggr_out.mean(dim=1)
+        aggr_out = aggr_out + self.bias
+
+        return aggr_out
+
+
+class GraphSAGEConv(MessagePassing):
+    def __init__(self, emb_dim, aggr = "mean"):
+        super(GraphSAGEConv, self).__init__()
+
+        self.emb_dim = emb_dim
+        self.linear = torch.nn.Linear(emb_dim, emb_dim)
+        self.edge_embedding1 = torch.nn.Embedding(num_bond_type, emb_dim)
+        self.edge_embedding2 = torch.nn.Embedding(num_bond_direction, emb_dim)
+
+        torch.nn.init.xavier_uniform_(self.edge_embedding1.weight.data)
+        torch.nn.init.xavier_uniform_(self.edge_embedding2.weight.data)
+
+        self.aggr = aggr
+
+    def forward(self, x, edge_index, edge_attr):
+        #add self loops in the edge space
+        edge_index = add_self_loops(edge_index, num_nodes = x.size(0))[0]
+
+        #add features corresponding to self-loop edges.
+        self_loop_attr = torch.zeros(x.size(0), 2)
+        self_loop_attr[:,0] = 4 #bond type for self-loop edge
+        self_loop_attr = self_loop_attr.to(edge_attr.device).to(edge_attr.dtype)
+        edge_attr = torch.cat((edge_attr, self_loop_attr), dim = 0)
+
+        edge_embeddings = self.edge_embedding1(edge_attr[:,0]) + self.edge_embedding2(edge_attr[:,1])
+
+        x = self.linear(x)
+
+        return self.propagate(edge_index, x=x, edge_attr=edge_embeddings)
+
+    def message(self, x_j, edge_attr):
+        return x_j + edge_attr
+
+    def update(self, aggr_out):
+        return F.normalize(aggr_out, p = 2, dim = -1)
+
+
+class GNN(torch.nn.Module):
+
+    def __init__(self, layers, emb_dim, jk = "last", dropout_prob= 0, gnn_type = "gin"):
+        super(GNN, self).__init__()
+        self.num_layer = layers
+        self.drop_ratio = dropout_prob
+        self.JK = jk
+
+        if self.num_layer < 2:
+            raise ValueError("Number of GNN layers must be greater than 1.")
+
+        self.x_embedding1 = torch.nn.Embedding(num_atom_type, emb_dim)
+        self.x_embedding2 = torch.nn.Embedding(num_chirality_tag, emb_dim)
+
+        torch.nn.init.xavier_uniform_(self.x_embedding1.weight.data)
+        torch.nn.init.xavier_uniform_(self.x_embedding2.weight.data)
+
+        self.gnns = torch.nn.ModuleList()
+        for layer in range(self.num_layer):
+            if gnn_type == "gin":
+                self.gnns.append(GINConv(emb_dim, aggr = "add"))
+            elif gnn_type == "gcn":
+                self.gnns.append(GCNConv(emb_dim))
+            elif gnn_type == "gat":
+                self.gnns.append(GATConv(emb_dim))
+            elif gnn_type == "graphsage":
+                self.gnns.append(GraphSAGEConv(emb_dim))
+
+        self.batch_norms = torch.nn.ModuleList()
+        for l in range(self.num_layer):
+            self.batch_norms.append(torch.nn.BatchNorm1d(emb_dim))
+
+    def forward(self, *argv):
+        if len(argv) == 3:
+            x, edge_index, edge_attr = argv[0], argv[1], argv[2]
+        elif len(argv) == 1:
+            data = argv[0]
+            x, edge_index, edge_attr = data.x, data.edge_index, data.edge_attr
+        else:
+            raise ValueError("Number of arguments is unmatched.")
+
+        x = self.x_embedding1(x[:,0]) + self.x_embedding2(x[:,1])
+
+        h_list = [x]
+        for l in range(self.num_layer):
+            h = self.gnns[l](h_list[l], edge_index, edge_attr)
+            h = self.batch_norms[l](h)
+            if l == self.num_layer - 1:
+                h = F.dropout(h, self.drop_ratio, training = self.training)
+            else:
+                h = F.dropout(F.relu(h), self.drop_ratio, training = self.training)
+            h_list.append(h)
+            
+        if self.JK == "concat":
+            node_embeddings = torch.cat(h_list, dim = 1)
+        elif self.JK == "last":
+            node_embeddings = h_list[-1]
+        elif self.JK == "max":
+            h_list = [h.unsqueeze_(0) for h in h_list]
+            node_embeddings = torch.max(torch.cat(h_list, dim = 0), dim = 0)[0]
+        elif self.JK == "sum":
+            h_list = [h.unsqueeze_(0) for h in h_list]
+            node_embeddings = torch.sum(torch.cat(h_list, dim = 0), dim = 0)[0]
+
+        return node_embeddings
+FS-GNNConv/gnn_conv.py
+
+import torch
+import torch.nn as nn
+from torch_geometric.nn import global_mean_pool
+from gnn_models import GNN
+#from torchmeta.modules import (MetaModule, MetaSequential, MetaConv1d,
+                               #MetaBatchNorm1d, MetaLinear)
+from torch_geometric.nn import MessagePassing
+from einops import rearrange
+from torch_geometric import utils
+import torch_geometric.utils as utils
+from torch_scatter import scatter_add, scatter_mean, scatter_max
+import torch_geometric.nn as gnn
+
+from torchmeta.modules import (MetaModule, MetaSequential, MetaConv1d,
+                             MetaBatchNorm1d, MetaLinear)
+
+
+def conv3x3(in_channels, out_channels, **kwargs):
+    return MetaSequential(
+        MetaConv1d(in_channels, out_channels, kernel_size=3, padding=1, **kwargs), #kernel_size=10
+        MetaBatchNorm1d(out_channels, momentum=1., track_running_stats=False),
+        nn.ReLU()
+    )
+
+def dense(in_channels, out_channels, **kwargs):
+    return MetaSequential(
+          MetaLinear(in_channels, out_channels, **kwargs), 
+          MetaBatchNorm1d(out_channels, momentum=1., track_running_stats=False),
+          nn.ReLU()
+      )
+
+
+class FullyConnectedNeuralNetwork(MetaModule):
+    def __init__(self, in_channels, out_features, hidden_size=10): #512
+        super(FullyConnectedNeuralNetwork, self).__init__()
+        self.in_channels = in_channels
+        self.out_features = out_features
+        self.hidden_size = hidden_size
+
+        self.features = MetaSequential(
+            dense(in_channels, 100),
+            dense(100, 50),
+            dense(50, hidden_size)
+        )
+       
+        self.classifier = MetaLinear(hidden_size, 1) #6144
+
+    def forward(self, inputs, params=None):
+        
+        inputs = inputs.reshape(10,300) #10,1,300
+        #print(inputs.size())
+        features = self.features(inputs, params=self.get_subdict(params, 'features'))
+        features = features.view((features.size(0), -1))
+        logits = self.classifier(features, params=self.get_subdict(params, 'classifier'))
+        return logits
+
+class ConvolutionalNeuralNetwork(MetaModule):
+    def __init__(self, in_channels, out_features, hidden_size=64): #512
+        super(ConvolutionalNeuralNetwork, self).__init__()
+        self.in_channels = in_channels
+        self.out_features = out_features
+        self.hidden_size = hidden_size
+
+        self.features = MetaSequential(
+            conv3x3(in_channels, 128),
+            conv3x3(128, 64),
+            conv3x3(64, 64)
+        )
+        
+        self.classifier = MetaLinear(64, 1) #6144
+
+    def forward(self, inputs, params=None):
+        
+        inputs = inputs.reshape(10,300,1) #change to (20,300,1) for # support set = 10 and batch_size = 20
+        features = self.features(inputs, params=self.get_subdict(params, 'features'))
+        #print(features.size())
+        features = features.view((features.size(0), -1))
+        
+        logits = self.classifier(features, params=self.get_subdict(params, 'classifier'))
+        return logits, features
+
+class GNN_prediction(torch.nn.Module):
+
+    def __init__(self, layer_number, emb_dim, jk = "last", dropout_prob= 0, pooling = "mean", gnn_type = "gin"):
+        super(GNN_prediction, self).__init__()
+        
+        self.num_layer = layer_number
+        self.drop_ratio = dropout_prob
+        self.jk = jk
+        self.emb_dim = emb_dim
+
+        if self.num_layer < 2:
+            raise ValueError("Number of layers must be > 2.")
+
+        self.gnn = GNN(layer_number, emb_dim, jk, dropout_prob, gnn_type = gnn_type)
+        
+        if pooling == "mean":
+            self.pool = global_mean_pool
+        else:
+            raise ValueError("Invalid pooling.")
+
+        self.mult = 1
+        self.graph_pred_linear = torch.nn.Linear(self.mult * self.emb_dim, 1)
+        
+    def from_pretrained(self, model_file):
+        self.gnn.load_state_dict(torch.load(model_file, map_location='cuda:0'), strict = False)
+        
+    def forward(self, *argv):
+        if len(argv) == 4:
+            x, edge_index, edge_attr, batch = argv[0], argv[1], argv[2], argv[3]
+        elif len(argv) == 1:
+            data = argv[0]
+            x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+        else:
+            raise ValueError("The arguments are unmatched!")
+
+        node_embeddings = self.gnn(x, edge_index, edge_attr)
+            
+        pred_gnn = self.graph_pred_linear(self.pool(node_embeddings, batch))
+        
+        return pred_gnn, node_embeddings
+        
+        
+if __name__ == "__main__":
+    pass
+FS-GNNConv/fsgnnconv_train.py
+from sklearn.manifold import TSNE
+# from tsnecuda import TSNE # Use this package if the previous one doesn't work
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+import statistics
+
+import torch
+import gc
+import torch.nn as nn
+from gnn_conv import GNN_prediction, ConvolutionalNeuralNetwork
+import torch.nn.functional as F
+from data import MoleculeDataset, random_sampler
+from torch_geometric.data import DataLoader
+import torch.optim as optim
+from tqdm import tqdm
+import numpy as np
+from sklearn.metrics import roc_auc_score
+from torch.nn.utils.convert_parameters import vector_to_parameters, parameters_to_vector
+
+def optimizer_to(optim, device):
+    # move optimizer to device
+    for param in optim.state.values():
+        # Not sure there are any global tensors in the state dict
+        if isinstance(param, torch.Tensor):
+            param.data = param.data.to(device)
+            if param._grad is not None:
+                param._grad.data = param._grad.data.to(device)
+        elif isinstance(param, dict):
+            for subparam in param.values():
+                if isinstance(subparam, torch.Tensor):
+                    subparam.data = subparam.data.to(device)
+                    if subparam._grad is not None:
+                        subparam._grad.data = subparam._grad.data.to(device)
+
+
+def load_ckp(checkpoint_fpath, model, optimizer):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
+    checkpoint = torch.load(checkpoint_fpath, map_location = device)
+    print(checkpoint)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    model.to(device)
+      
+    optimizer_to(optimizer, device)
+
+    return model, optimizer, checkpoint['epoch']
+
+
+def sample_train(n_tasks, data, batch_size, n_support, n_query):
+    
+    support_sets = []
+    query_sets = []
+    
+    for train_task in range(n_tasks):
+         dataset = MoleculeDataset("Data/" + data + "/pre-processed/task_" + str(train_task+1), dataset = data)
+         support_dataset, query_dataset = random_sampler(dataset, data, train_task, n_support, n_query, train=True)
+         support_set = DataLoader(support_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last = True)
+         query_set = DataLoader(query_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last = True)
+         support_sets.append(support_set)
+         query_sets.append(query_set)
+         
+    return support_sets, query_sets
+
+def sample_test(tasks, test_task, data, batch_size, n_support, n_query):
+    
+    dataset = MoleculeDataset("Data/" + data + "/pre-processed/task_" + str(tasks-test_task), dataset = data)
+    support_dataset, query_dataset = random_sampler(dataset, data, tasks-test_task-1, n_support, n_query, train=False)
+    support_set = DataLoader(support_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last=True)
+    query_set = DataLoader(query_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last = True)
+    
+    return support_set, query_set
+    
+
+def roc_accuracy(roc_scores, y_label, y_pred):
+    
+    roc_auc_list = []
+    y_label = torch.cat(y_label, dim = 0).cpu().detach().numpy()
+    y_pred = torch.cat(y_pred, dim = 0).cpu().detach().numpy()
+   
+    roc_auc_list.append(roc_auc_score(y_label, y_pred))
+    roc_auc = sum(roc_auc_list)/len(roc_auc_list)
+    roc_scores.append(roc_auc)    
+    
+    return roc_scores
+
+def parse_pred(logit):
+    
+    pred = F.sigmoid(logit)
+    pred = torch.where(pred>0.5, torch.ones_like(pred), pred)
+    pred = torch.where(pred<=0.5, torch.zeros_like(pred), pred) 
+    
+    return pred
+
+
+def plot_tsne(nodes, labels, t):
+    
+    #Plot t-SNE visualizations
+    
+    labels_tox21 = ['SR-HSE', 'SR-MMP', 'SR-p53']
+    #labels_sider = ['R.U.D.', 'P.P.P.C.', 'E.L.D.', 'C.D.', 'N.S.D.', 'I.S.P.C.']
+     
+    t+=1
+    emb_tsne = np.asarray(nodes)
+    y_tsne = np.asarray(labels).flatten()
+    slipper_colour = pd.DataFrame({'colour': ['Blue', 'Orange'],'label': [0, 1]})
+    
+    c_dict = {'Positive': '#ff7f0e','Negative': '#1f77b4' }
+     
+    z = TSNE(n_components=2, init='random').fit_transform(emb_tsne)
+    label_vals = {0: 'Negative', 1: 'Positive'}
+    tsne_result_df = pd.DataFrame({'tsne_dim_1': z[:,0], 'tsne_dim_2': z[:,1], 'label': y_tsne})
+    tsne_result_df['label'] = tsne_result_df['label'].map(label_vals)
+    fig, ax = plt.subplots(1)
+    sns.set_style("ticks",{'axes.grid' : True})
+    g1 = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='label', data=tsne_result_df, ax=ax,s=10, palette = c_dict, hue_order=('Negative', 'Positive'))
+    lim = (z.min()-5, z.max()+5)
+    ax.set_xlim(lim)
+    ax.set_ylim(lim)
+    ax.set_aspect('equal') 
+    
+    g1.legend(title=labels_tox21[t-1], bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)    
+    g1.set(xticklabels=[])
+    g1.set(yticklabels=[])
+    g1.set(xlabel=None)
+    g1.set(ylabel=None) 
+    g1.tick_params(bottom=False) 
+    g1.tick_params(left=False)
+    plt.savefig('plots/'+labels_tox21[t-1])
+    plt.show()
+    plt.close(fig)
+    
+    return t
+    
+class FSGNNConv():
+    def __init__(self, dataset, gnn, support_set, pretrained, baseline):
+        super(FSGNNConv,self).__init__()
+        
+        if dataset== "tox21":
+            self.tasks = 12
+            self.train_tasks  = 9
+            self.test_tasks = 3
+
+        elif dataset == "sider":
+            self.tasks = 27
+            self.train_tasks  = 21
+            self.test_tasks = 6
+            
+        self.data = dataset
+        self.baseline = baseline
+        self.graph_layers = 5
+        self.n_support = support_set
+        self.learning_rate = 0.001
+        self.n_query = 256
+        self.emb_size = 300
+        self.batch_size = 10
+        self.lr_update = 0.5
+        self.k_train = 10
+        self.k_test = 20
+        self.device = 0
+        self.loss = nn.BCEWithLogitsLoss()
+        self.gnn = GNN_prediction(self.graph_layers, self.emb_size, jk = "last", dropout_prob = 0.5, pooling = "mean", gnn_type = gnn)
+        self.cnn = ConvolutionalNeuralNetwork(300, 1)   
+        self.meta_opt = torch.optim.Adam(self.cnn.parameters(), lr=1e-4)
+        self.gnn.from_pretrained(pretrained)
+        self.pos_weight = torch.FloatTensor([25]).to(self.device) #Tox21: 35; SIDER: 1
+        self.loss_cnn = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
+        
+        graph_params = []
+        graph_params.append({"params": self.gnn.gnn.parameters()})
+        graph_params.append({"params": self.gnn.graph_pred_linear.parameters(), "lr":self.learning_rate})
+        
+        self.opt = optim.Adam(graph_params, lr=self.learning_rate, weight_decay=0) 
+        self.gnn.to(torch.device("cuda:0"))
+        self.cnn.to(torch.device("cuda:0"))
+        
+        if self.baseline == 0:
+            self.ckp_path_gnn = "checkpoints/checkpoints-FSGNNConv/check-tox21-5-gnn.pt"
+            self.ckp_path_cnn = "checkpoints/checkpoints-FSGNNConv/check-tox21-5-cnn.pt"
+        elif self.baseline == 1:
+            self.ckp_path_gnn = "checkpoints/checkpoints-baselines/GCN/checkpoint_gcn_gnn_tox21_5.pt"
+            
+        # Model checkpoints:
+
+        # FS-GNNConv-Tox21-5-GNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-5-gnn.pt"
+        # FS-GNNConv-Tox21-5-CNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-5-cnn.pt"
+        # FS-GNNConv-SIDER-5-GNN: "checkpoints/checkpoints-FSGNNConv/check-sider-5-gnn.pt"
+        # FS-GNNConv-SIDER-5-CNN: "checkpoints/checkpoints-FSGNNConv/check-sider-5-cnn.pt"
+        # FS-GNNConv-Tox21-10-GNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-10-gnn.pt"
+        # FS-GNNConv-Tox21-10-CNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-10-cnn.pt"
+        # FS-GNNConv-SIDER-10-GNN: "checkpoints/checkpoints-FSGNNConv/check-sider-10-gnn.pt"
+        # FS-GNNConv-SIDER-10-CNN: "checkpoints/checkpoints-FSGNNConv/check-sider-10-cnn.pt"
+        
+        # GCN-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_tox21_5.pt"
+        # GCN-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_sider_5.pt"    
+        # GCN-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_tox21_10.pt"
+        # GCN-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_sider_10.pt"   
+        
+        # GraphSAGE-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_tox21_5.pt"
+        # GraphSAGE-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_sider_5.pt"    
+        # GraphSAGE-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_tox21_10.pt"   
+        # GraphSAGE-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_sider_10.pt" 
+        
+        # GIN-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_tox21_5.pt"
+        # GIN-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_sider_5.pt"
+        # GIN-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_tox21_10.pt"
+        # GIN-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_sider_10.pt"
+    
+        
+        #self.gnn, self.opt, start_epoch = load_ckp(self.ckp_path_gnn, self.gnn, self.opt)
+        #self.cnn, self.meta_opt, start_epoch = load_ckp(self.ckp_path_cnn, self.cnn, self.meta_opt)
+        
+    def update_graph_params(self, loss, lr_update):
+    
+        grads = torch.autograd.grad(loss, self.gnn.parameters(), retain_graph=True, allow_unused=True)
+        used_grads = [grad for grad in grads if grad is not None]
+        
+        return parameters_to_vector(used_grads), parameters_to_vector(self.gnn.parameters()) - parameters_to_vector(used_grads) * lr_update
+        
+    def update_cnn_params(self, loss, lr_update):
+       
+        grads_cnn = torch.autograd.grad(loss, self.cnn.parameters())
+        used_grads_cnn = [grad for grad in grads_cnn if grad is not None]
+        
+        return parameters_to_vector(used_grads_cnn), parameters_to_vector(self.cnn.parameters()) - parameters_to_vector(used_grads_cnn) * lr_update
+
+    def meta_train(self):
+        self.gnn.train()
+        if self.baseline == 0:
+            self.cnn.train()
+        device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
+        
+        support_sets, query_sets = sample_train(self.tasks, self.data, self.batch_size, self.n_support, self.n_query)
+        
+        for k in range(0, self.k_train):
+            graph_params = parameters_to_vector(self.gnn.parameters())
+            if self.baseline == 0:
+                cnn_params = parameters_to_vector(self.cnn.parameters())
+            
+            query_losses = torch.tensor([0.0]).to(device)
+            for t in range(self.train_tasks):
+
+                loss_support = torch.tensor([0.0]).to(device)
+                loss_query = torch.tensor([0.0]).to(device)
+                
+                if self.baseline == 0:
+                    inner_losses = torch.tensor([0.0]).to(device)
+                    outer_losses = torch.tensor([0.0]).to(device)
+                    
+                for batch_idx, batch in enumerate(tqdm(support_sets[t], desc="Iteration")):
+                    batch = batch.to(device)
+                    graph_pred, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                    label = batch.y.view(graph_pred.shape)
+                    loss_graph = self.loss(graph_pred.double(), label.to(torch.float64))
+                    support_loss = torch.sum(loss_graph)/graph_pred.size(dim=0)
+                    loss_support += support_loss
+                    
+                    if self.baseline == 0:
+                        cnn_pred, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                        loss_cnn = self.loss_cnn(F.sigmoid(cnn_pred).double(), label.to(torch.float64))
+                        inner_loss = torch.sum(loss_cnn)/cnn_pred.size(dim=0)
+                   
+                    if self.baseline == 0:
+                        inner_losses += inner_loss
+                 
+                updated_grad, updated_params = self.update_graph_params(loss_support, lr_update = self.lr_update)
+                vector_to_parameters(updated_params, self.gnn.parameters())
+
+                if self.baseline == 0:
+                    updated_grad_cnn, updated_cnn_params = self.update_cnn_params(loss_logits, lr_update = self.lr_update)
+                    vector_to_parameters(updated_cnn_params, self.cnn.parameters())
+                
+                for batch_idx, batch in enumerate(tqdm(query_sets[t], desc="Iteration")):
+                    batch = batch.to(device)
+                    
+                    graph_pred, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                    label = batch.y.view(graph_pred.shape)
+                    
+                    if self.baseline == 0:
+                        logit, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                        loss_cnn = self.loss_cnn(F.sigmoid(logit).double(), label.to(torch.float64))
+                        outer_loss = torch.sum(loss_cnn)/logit.size(dim=0)
+                    
+                    loss_graph = self.loss(graph_pred.double(), label.to(torch.float64))
+                    query_loss = torch.sum(loss_graph)/graph_pred.size(dim=0)
+                    loss_query += query_loss
+                    
+                    if self.baseline == 0:
+                        outer_losses += outer_loss
+              
+                if t == 0:
+                    query_losses = loss_query
+                    if self.baseline == 0:
+                        query_outer_losses = outer_losses
+                else:
+                    query_losses = torch.cat((query_losses, loss_query), 0)
+                    if self.baseline == 0:
+                        query_outer_losses =  torch.cat((query_outer_losses, outer_losses), 0)
+
+                vector_to_parameters(graph_params, self.gnn.parameters())
+                if self.baseline == 0:
+                    vector_to_parameters(cnn_params, self.cnn.parameters())
+
+            query_losses = torch.sum(query_losses)
+            loss_graph = query_losses / self.train_tasks   
+            loss_graph.to(device)
+            
+            if self.baseline == 0:
+                query_outer_loss = torch.sum(query_outer_losses)
+                loss_conv = query_outer_loss / self.train_tasks
+                loss_conv.to(device) 
+            
+            self.opt.zero_grad()
+            
+            if self.baseline == 0:
+                self.meta_opt.zero_grad()
+            
+            if self.baseline == 1:
+                loss_graph.backward()
+            
+            if self.baseline == 0:
+                loss_graph.backward(retain_graph=True)
+                loss_conv.backward()
+            
+            self.opt.step()
+            
+            if self.baseline == 0:
+                self.meta_opt.step()
+            
+        return []
+
+    def meta_test(self):
+        roc_scores = []
+        t=0
+        graph_params = parameters_to_vector(self.gnn.parameters())
+        if self.baseline == 0:
+            cnn_params = parameters_to_vector(self.cnn.parameters())
+            
+        device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
+        
+        for test_task in range(self.test_tasks):
+            
+            support_set, query_set = sample_test(self.tasks, test_task, self.data, self.batch_size, self.n_support, self.n_query)
+            self.gnn.eval()
+            if self.baseline == 0:
+                self.cnn.eval()
+                
+            for k in range(0, self.k_test):
+                
+                graph_loss = torch.tensor([0.0]).to(device)
+                
+                if self.baseline == 0:
+                    loss_logits = torch.tensor([0.0]).to(device)
+                
+                for batch_idx, batch in enumerate(tqdm(support_set, desc="Iteration")):
+                    
+                    batch = batch.to(device)
+                    graph_pred, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                    y = batch.y.view(graph_pred.shape)
+                    loss_graph = self.loss(graph_pred.double(), y.to(torch.float64))
+                    graph_loss += torch.sum(loss_graph)/graph_pred.size(dim=0)
+                    
+                    if self.baseline == 0:
+                        
+                        with torch.no_grad():
+                            val_logit, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                        
+                        loss_cnn = self.loss_cnn(F.sigmoid(val_logit).double(), y.to(torch.float64))
+                        loss_logits += torch.sum(loss_cnn)/val_logit.size(dim=0)
+                          
+                updated_grad, updated_params = self.update_graph_params(graph_loss, lr_update = self.lr_update)
+                vector_to_parameters(updated_params, self.gnn.parameters())
+                
+                if self.baseline == 0:
+                    updated_grad_cnn, updated_cnn_params = self.update_cnn_params(loss_logits, lr_update = self.lr_update)
+                    vector_to_parameters(updated_cnn_params, self.cnn.parameters())
+
+            nodes=[]
+            labels=[]
+            y_label = []
+            y_pred = []
+           
+            for batch_idx, batch in enumerate(tqdm(query_set, desc="Iteration")):
+                batch = batch.to(device)
+                
+                with torch.no_grad(): 
+                    logit, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+    
+                y_label.append(batch.y.view(logit.shape))
+            
+                if self.baseline == 0:
+                    logit, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                
+                p = parse_pred(logit)
+                    
+                emb_tsne = emb.cpu().detach().numpy() 
+                y_tsne = batch.y.view(p.shape).cpu().detach().numpy()
+               
+                for i in emb_tsne:
+                    nodes.append(i)
+                for j in y_tsne:
+                    labels.append(j)
+                
+                y_pred.append(p)   
+              
+            #t = plot_tsne(nodes, labels, t)
+             
+            roc_scores = roc_accuracy(roc_scores, y_label, y_pred)
+               
+            vector_to_parameters(graph_params, self.gnn.parameters())
+            if self.baseline == 0:
+                vector_to_parameters(cnn_params, self.cnn.parameters())
+        
+        return roc_scores, self.gnn.state_dict(), self.cnn.state_dict(), self.opt.state_dict(), self.meta_opt.state_dict()
+                
+FS-GNNConv/train_model.py
+import torch
+from torch import nn
+from torch_geometric.nn import global_mean_pool
+from gnn_models import GNN
+from einops import rearrange
+from einops.layers.torch import Rearrange
+
+def pair(t):
+    return t if isinstance(t, tuple) else (t, t)
+
+def position_emb(patches, temperature = 10000, dtype = torch.float32):
+    _, h, w, dim, device, dtype = *patches.shape, patches.device, patches.dtype
+
+    y, x = torch.meshgrid(torch.arange(h, device = device), torch.arange(w, device = device), indexing = 'ij')
+    assert (dim % 4) == 0, 'feature dimension must be multiple of 4 for sincos emb'
+    omega = torch.arange(dim // 4, device = device) / (dim // 4 - 1)
+    omega = 1. / (temperature ** omega)
+
+    y = y.flatten()[:, None] * omega[None, :]
+    x = x.flatten()[:, None] * omega[None, :] 
+    pe = torch.cat((x.sin(), x.cos(), y.sin(), y.cos()), dim = 1)
+    return pe.type(dtype)
+
+# classes
+
+class FeedForwardLayer(nn.Module):
+    def __init__(self, dim, hidden_dim):
+        super().__init__()
+        self.net = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, hidden_dim),
+            nn.GELU(),
+            nn.Linear(hidden_dim, dim),
+        )
+    def forward(self, x):
+        return self.net(x)
+
+class AttentionLayer(nn.Module):
+    def __init__(self, dim, heads = 5, dim_head = 64):
+        super().__init__()
+        inner_dim = dim_head *  heads
+        self.heads = heads
+        self.scale = dim_head ** -0.5
+        self.norm = nn.LayerNorm(dim)
+
+        self.attend = nn.Softmax(dim = -1)
+
+        self.to_qkv = nn.Linear(dim, inner_dim * 3, bias = False)
+        self.to_out = nn.Linear(inner_dim, dim, bias = False)
+
+    def forward(self, x):
+        x = self.norm(x)
+
+        qkv = self.to_qkv(x).chunk(3, dim = -1)
+        q, k, v = map(lambda t: rearrange(t, 'b n (h d) -> b h n d', h = self.heads), qkv)
+
+        dots = torch.matmul(q, k.transpose(-1, -2)) * self.scale
+
+        attn = self.attend(dots)
+
+        out = torch.matmul(attn, v)
+        out = rearrange(out, 'b h n d -> b n (h d)')
+        return self.to_out(out)
+
+class Transformer(nn.Module):
+    def __init__(self, dim, depth, heads, dim_head, mlp_dim):
+        super().__init__()
+        self.layers = nn.ModuleList([])
+        for _ in range(depth):
+            self.layers.append(nn.ModuleList([
+                AttentionLayer(dim, heads = heads, dim_head = dim_head),
+                FeedForwardLayer(dim, mlp_dim)
+            ]))
+    def forward(self, x):
+        for attn, ff in self.layers:
+            x = attn(x) + x
+            x = ff(x) + x
+        return x
+
+class TR(nn.Module):
+    def __init__(self, emb_size, patch_size, num_classes, dim, depth, heads, mlp_dim, channels = 1, dim_head = 64):
+        super().__init__()
+        emb_height, emb_width = pair(emb_size)
+        patch_height, patch_width = pair(patch_size)
+
+        n_patches = (emb_height // patch_height) * (emb_width // patch_width)
+        patch_dim = channels * patch_height * patch_width
+
+        self.to_patch_embedding = nn.Sequential(
+            Rearrange('b c (h p1) (w p2) -> b h w (p1 p2 c)', p1 = patch_height, p2 = patch_width),
+            nn.Linear(patch_dim, dim),
+        )
+
+        self.transformer = Transformer(dim, depth, heads, dim_head, mlp_dim)
+
+        self.to_latent = nn.Identity()
+        self.linear_head = nn.Sequential(
+            nn.LayerNorm(dim),
+            nn.Linear(dim, num_classes)
+        )
+
+    def forward(self, emb):
+        *_, h, w, dtype = *emb.shape, emb.dtype
+        
+        emb = emb.reshape(10,1,300,1)
+        
+        h = self.to_patch_embedding(emb)
+        pe = position_emb(h)
+        h = rearrange(h, 'b ... d -> b (...) d') + pe
+
+        h = self.transformer(h)
+        h = h.mean(dim = 1)
+
+        h = self.to_latent(h)
+        return self.linear_head(h), h
+    
+class GNN_prediction(torch.nn.Module):
+
+    def __init__(self, layer_number, emb_dim, jk = "last", dropout_prob= 0, pooling = "mean", gnn_type = "gin"):
+        super(GNN_prediction, self).__init__()
+        
+        self.num_layer = layer_number
+        self.drop_ratio = dropout_prob
+        self.jk = jk
+        self.emb_dim = emb_dim
+
+        if self.num_layer < 2:
+            raise ValueError("Number of layers must be > 2.")
+
+        self.gnn = GNN(layer_number, emb_dim, jk, dropout_prob, gnn_type = gnn_type)
+        
+        if pooling == "mean":
+            self.pool = global_mean_pool
+        else:
+            raise ValueError("Invalid pooling.")
+
+        self.mult = 1
+        self.graph_pred_linear = torch.nn.Linear(self.mult * self.emb_dim, 1)
+        
+    def from_pretrained(self, model_file):
+        self.gnn.load_state_dict(torch.load(model_file, map_location='cuda:0'), strict = False)
+        
+    def forward(self, *argv):
+        if len(argv) == 4:
+            x, edge_index, edge_attr, batch = argv[0], argv[1], argv[2], argv[3]
+        elif len(argv) == 1:
+            data = argv[0]
+            x, edge_index, edge_attr, batch = data.x, data.edge_index, data.edge_attr, data.batch
+        else:
+            raise ValueError("The arguments are unmatched!")
+
+        node_embeddings = self.gnn(x, edge_index, edge_attr)
+            
+        pred_gnn = self.graph_pred_linear(self.pool(node_embeddings, batch))
+        
+        return pred_gnn, node_embeddings
+        
+        
+if __name__ == "__main__":
+    pass
+
+FS-GNNConv/fsgnnconv_eval.py
+import torch
+import gc
+import torch.nn as nn
+from gnn_conv import GNN_prediction, ConvolutionalNeuralNetwork
+import torch.nn.functional as F
+from data import MoleculeDataset, random_sampler
+from torch_geometric.data import DataLoader
+import torch.optim as optim
+from tqdm import tqdm
+import numpy as np
+from sklearn.metrics import roc_auc_score
+from torch.nn.utils.convert_parameters import vector_to_parameters, parameters_to_vector
+from sklearn.manifold import TSNE
+# from tsnecuda import TSNE # Use this package if the previous one doesn't work
+import matplotlib.pyplot as plt
+import pandas as pd
+import seaborn as sns
+import statistics
+
+def optimizer_to(optim, device):
+    # move optimizer to device
+    for param in optim.state.values():
+        # Not sure there are any global tensors in the state dict
+        if isinstance(param, torch.Tensor):
+            param.data = param.data.to(device)
+            if param._grad is not None:
+                param._grad.data = param._grad.data.to(device)
+        elif isinstance(param, dict):
+            for subparam in param.values():
+                if isinstance(subparam, torch.Tensor):
+                    subparam.data = subparam.data.to(device)
+                    if subparam._grad is not None:
+                        subparam._grad.data = subparam._grad.data.to(device)
+
+def load_ckp(checkpoint_fpath, model, optimizer):
+    device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
+    checkpoint = torch.load(checkpoint_fpath, map_location = device)
+    print(checkpoint)
+    model.load_state_dict(checkpoint['state_dict'])
+    optimizer.load_state_dict(checkpoint['optimizer'])
+    model.to(device)
+      
+    optimizer_to(optimizer, device)
+
+    return model, optimizer, checkpoint['epoch']
+
+def sample_test(tasks, test_task, data, batch_size, n_support, n_query):
+    
+    dataset = MoleculeDataset("Data/" + data + "/pre-processed/task_" + str(tasks-test_task), dataset = data)
+    support_dataset, query_dataset = random_sampler(dataset, data, tasks-test_task-1, n_support, n_query, train=False)
+    support_set = DataLoader(support_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last=True)
+    query_set = DataLoader(query_dataset, batch_size=batch_size, shuffle=False, num_workers = 0, drop_last = True)
+    
+    return support_set, query_set
+    
+
+def roc_accuracy(roc_scores, y_label, y_pred):
+    
+    roc_auc_list = []
+    y_label = torch.cat(y_label, dim = 0).cpu().detach().numpy()
+    y_pred = torch.cat(y_pred, dim = 0).cpu().detach().numpy()
+   
+    roc_auc_list.append(roc_auc_score(y_label, y_pred))
+    roc_auc = sum(roc_auc_list)/len(roc_auc_list)
+    roc_scores.append(roc_auc)    
+    
+    return roc_scores
+
+def parse_pred(logit):
+    
+    pred = F.sigmoid(logit)
+    pred = torch.where(pred>0.5, torch.ones_like(pred), pred)
+    pred = torch.where(pred<=0.5, torch.zeros_like(pred), pred) 
+    
+    return pred
+
+def plot_tsne(nodes, labels, t):
+    
+    #Plot t-SNE visualizations
+    
+    labels_tox21 = ['SR-HSE', 'SR-MMP', 'SR-p53']
+    #labels_sider = ['R.U.D.', 'P.P.P.C.', 'E.L.D.', 'C.D.', 'N.S.D.', 'I.S.P.C.']
+     
+    t+=1
+    emb_tsne = np.asarray(nodes)
+    y_tsne = np.asarray(labels).flatten()
+    slipper_colour = pd.DataFrame({'colour': ['Blue', 'Orange'],
+                       'label': [0, 1]})
+    
+    c_dict = {'Positive': '#ff7f0e','Negative': '#1f77b4' }
+     
+    z = TSNE(n_components=2, init='random').fit_transform(emb_tsne)
+    label_vals = {0: 'Negative', 1: 'Positive'}
+    tsne_result_df = pd.DataFrame({'tsne_dim_1': z[:,0], 'tsne_dim_2': z[:,1], 'label': y_tsne})
+    tsne_result_df['label'] = tsne_result_df['label'].map(label_vals)
+    fig, ax = plt.subplots(1)
+    sns.set_style("ticks",{'axes.grid' : True})
+    g1 = sns.scatterplot(x='tsne_dim_1', y='tsne_dim_2', hue='label', data=tsne_result_df, ax=ax,s=10, palette = c_dict, hue_order=('Negative', 'Positive'))
+    lim = (z.min()-5, z.max()+5)
+    ax.set_xlim(lim)
+    ax.set_ylim(lim)
+    ax.set_aspect('equal') 
+    
+    g1.legend(title=labels_tox21[t-1], bbox_to_anchor=(1.05, 1), loc=2, borderaxespad=0.0)    
+    g1.set(xticklabels=[])
+    g1.set(yticklabels=[])
+    g1.set(xlabel=None)
+    g1.set(ylabel=None)
+    g1.tick_params(bottom=False) 
+    g1.tick_params(left=False)
+    plt.savefig('plots/'+labels_tox21[t-1])
+    plt.show()
+    plt.close(fig)
+    
+    return t
+
+class FSGNNConv_eval():
+    def __init__(self, dataset, gnn, support_set, pretrained, baseline):
+        super(FSGNNConv_eval,self).__init__()
+                
+        if dataset== "tox21":
+            self.tasks = 12
+            self.train_tasks  = 9
+            self.test_tasks = 3
+ 
+        elif dataset == "sider":
+            self.tasks = 27
+            self.train_tasks  = 21
+            self.test_tasks = 6
+            
+        self.data = dataset
+        self.baseline = baseline
+        self.graph_layers = 5
+        self.n_support = support_set
+        self.learning_rate = 0.001
+        self.n_query = 256
+        self.emb_size = 300
+        self.batch_size = 10
+        self.lr_update = 0.5
+        self.k_train = 10
+        self.k_test = 20
+        self.device = 0
+        self.loss = nn.BCEWithLogitsLoss()
+        self.gnn = GNN_prediction(self.graph_layers, self.emb_size, jk = "last", dropout_prob = 0.5, pooling = "mean", gnn_type = gnn)
+        self.cnn = ConvolutionalNeuralNetwork(300, 1)   
+        self.meta_opt = torch.optim.Adam(self.cnn.parameters(), lr=1e-4)
+        self.gnn.from_pretrained(pretrained)
+        self.pos_weight = torch.FloatTensor([1]).to(self.device) #Tox21: 35; SIDER: 1
+        self.loss_cnn = nn.BCEWithLogitsLoss(pos_weight=self.pos_weight)
+        
+        graph_params = []
+        graph_params.append({"params": self.gnn.gnn.parameters()})
+        graph_params.append({"params": self.gnn.graph_pred_linear.parameters(), "lr":self.learning_rate})
+        
+        self.opt = optim.Adam(graph_params, lr=self.learning_rate, weight_decay=0) 
+        self.gnn.to(torch.device("cuda:0"))
+        self.cnn.to(torch.device("cuda:0"))
+        
+        if self.baseline == 0:
+            self.ckp_path_gnn = "checkpoints/checkpoints-FSGNNConv/check-tox21-5-gnn.pt"
+            self.ckp_path_cnn = "checkpoints/checkpoints-FSGNNConv/check-tox21-5-cnn.pt"
+        elif self.baseline == 1:
+            self.ckp_path_gnn = "checkpoints/checkpoints-FSGNNConv/check-tox21-5-gnn.pt"
+        
+        # Model checkpoints:
+            
+        # FS-GNNConv-Tox21-5-GNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-5-gnn.pt"
+        # FS-GNNConv-Tox21-5-CNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-5-cnn.pt"
+        # FS-GNNConv-SIDER-5-GNN: "checkpoints/checkpoints-FSGNNConv/check-sider-5-gnn.pt"
+        # FS-GNNConv-SIDER-5-CNN: "checkpoints/checkpoints-FSGNNConv/check-sider-5-cnn.pt"
+        # FS-GNNConv-Tox21-10-GNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-10-gnn.pt"
+        # FS-GNNConv-Tox21-10-CNN: "checkpoints/checkpoints-FSGNNConv/check-tox21-10-cnn.pt"
+        # FS-GNNConv-SIDER-10-GNN: "checkpoints/checkpoints-FSGNNConv/check-sider-10-gnn.pt"
+        # FS-GNNConv-SIDER-10-CNN: "checkpoints/checkpoints-FSGNNConv/check-sider-10-cnn.pt"
+        
+        # GCN-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_tox21_5.pt"
+        # GCN-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_sider_5.pt"    
+        # GCN-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_tox21_10.pt"
+        # GCN-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GCN/checkpoint_GCN_gnn_sider_10.pt"   
+        
+        # GraphSAGE-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_tox21_5.pt"
+        # GraphSAGE-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_sider_5.pt"    
+        # GraphSAGE-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_tox21_10.pt"   
+        # GraphSAGE-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GraphSAGE/checkpoint_graphsage_gnn_sider_10.pt" 
+        
+        # GIN-Tox21-5-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_tox21_5.pt"
+        # GIN-SIDER-5-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_sider_5.pt"
+        # GIN-Tox21-10-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_tox21_10.pt"
+        # GIN-SIDER-10-GNN: "checkpoints/checkpoints-baselines/GIN/checkpoint_GIN_gnn_sider_10.pt"
+        
+        self.gnn, self.opt, start_epoch = load_ckp(self.ckp_path_gnn, self.gnn, self.opt)
+        self.cnn, self.meta_opt, start_epoch = load_ckp(self.ckp_path_cnn , self.cnn, self.meta_opt)
+    
+    def update_graph_params(self, loss, lr_update):
+    
+        grads = torch.autograd.grad(loss, self.gnn.parameters(), retain_graph=True, allow_unused=True)
+        used_grads = [grad for grad in grads if grad is not None]
+        
+        return parameters_to_vector(used_grads), parameters_to_vector(self.gnn.parameters()) - parameters_to_vector(used_grads) * lr_update
+        
+    def update_cnn_params(self, loss, lr_update):
+       
+        grads_cnn = torch.autograd.grad(loss, self.cnn.parameters())
+        used_grads_cnn = [grad for grad in grads_cnn if grad is not None]
+        
+        return parameters_to_vector(used_grads_cnn), parameters_to_vector(self.cnn.parameters()) - parameters_to_vector(used_grads_cnn) * lr_update
+
+    def meta_evaluate(self):
+        roc_scores = []
+        t=0
+        graph_params = parameters_to_vector(self.gnn.parameters())
+        if self.baseline == 0:
+            cnn_params = parameters_to_vector(self.cnn.parameters())
+                    
+        device = torch.device("cuda:0" if torch.cuda.is_available() else torch.device("cpu"))
+        for test_task in range(self.test_tasks):
+            support_set, query_set = sample_test(self.tasks, test_task, self.data, self.batch_size, self.n_support, self.n_query)
+            self.gnn.eval()
+            if self.baseline == 0:    
+                self.cnn.eval()
+            for k in range(0, self.k_test):
+                graph_loss = torch.tensor([0.0]).to(device)
+                if self.baseline == 0:   
+                    loss_logits = torch.tensor([0.0]).to(device)
+                
+                for batch_idx, batch in enumerate(tqdm(support_set, desc="Iteration")):
+                    batch = batch.to(device)
+                    graph_pred, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                    y = batch.y.view(graph_pred.shape)
+                    loss_graph = self.loss(graph_pred.double(), y.to(torch.float64))
+                    graph_loss += torch.sum(loss_graph)/graph_pred.size(dim=0)
+                    
+                    if self.baseline == 0:
+                        with torch.no_grad():
+                            val_logit, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                        
+                        loss_cnn = self.loss_cnn(F.sigmoid(val_logit).double(), y.to(torch.float64))
+                        loss_logits += torch.sum(loss_cnn)/val_logit.size(dim=0) 
+                                            
+                updated_grad, updated_params = self.update_graph_params(graph_loss, lr_update = self.lr_update)
+                vector_to_parameters(updated_params, self.gnn.parameters())
+
+                if self.baseline == 0:
+                    updated_grad_cnn, updated_cnn_params = self.update_cnn_params(loss_logits, lr_update = self.lr_update)
+                    vector_to_parameters(updated_cnn_params, self.cnn.parameters())
+            
+            nodes=[]
+            labels=[]
+            y_label = []
+            y_pred = []
+           
+            for batch_idx, batch in enumerate(tqdm(query_set, desc="Iteration")):
+                batch = batch.to(device)
+                
+                with torch.no_grad(): 
+                    logit, emb = self.gnn(batch.x, batch.edge_index, batch.edge_attr, batch.batch)
+                
+                y_label.append(batch.y.view(logit.shape))
+                if self.baseline == 0:
+                    logit, emb = self.cnn(self.gnn.pool(emb, batch.batch))
+                    
+                p = parse_pred(logit)
+                
+                emb_tsne = emb.cpu().detach().numpy() 
+                y_tsne = batch.y.view(p.shape).cpu().detach().numpy()
+               
+                for i in emb_tsne:
+                    nodes.append(i)
+                for j in y_tsne:
+                    labels.append(j)
+                
+                y_pred.append(p)   
+              
+            #t = plot_tsne(nodes, labels, t)
+             
+            roc_scores = roc_accuracy(roc_scores, y_label, y_pred)
+               
+            vector_to_parameters(graph_params, self.gnn.parameters())
+            if self.baseline == 0:
+                vector_to_parameters(cnn_params, self.cnn.parameters())
+        
+        return roc_scores, self.gnn.state_dict(), self.cnn.state_dict(), self.opt.state_dict(), self.meta_opt.state_dict()
+                
+FS-GNNConv/train_model.py
+import argparse
+import torch
+from fsgnnconv_train import FSGNNConv
+import shutil
+import gc
+
+def save_ckp(state, is_best, checkpoint_dir, best_model_dir, filename, best_model):
+    f_path = checkpoint_dir + filename
+    torch.save(state, f_path)
+    if is_best:
+        best_fpath = best_model_dir + best_model
+        shutil.copyfile(f_path, best_fpath)
+
+dataset = "tox21"
+gnn= "gin" #gin, graphsage, gcn
+support_set = 5
+pretrained = "pre-trained/supervised_contextpred.pth"
+baseline = 0
+device = "cuda:0"
+model = FSGNNConv(dataset, gnn, support_set, pretrained, baseline)
+
+if dataset == "tox21":
+    exp = [0,0,0]
+    labels =  ['SR-HSE', 'SR-MMP', 'SR-p53']
+elif dataset == "sider":
+    exp = [0,0,0,0,0,0]
+    labels =  ['R.U.D.', 'P.P.P.C.', 'E.L.D.', 'C.D.', 'N.S.D.', 'I.P.P.C.']
+
+for epoch in range(1, 10000):
+    
+    is_best = False
+    
+    model.meta_train()
+    
+    roc_scores, gnn_model, cnn_model, gnn_opt, t_opt = model.meta_test() 
+    
+    print(roc_scores)
+    checkpoint_gnn = {
+            'epoch': epoch + 1,
+            'state_dict': gnn_model,
+            'optimizer': gnn_opt
+    }
+    
+    checkpoint_cnn = {
+            'epoch': epoch + 1,
+            'state_dict': cnn_model,
+            'optimizer': t_opt
+    }
+    
+
+    checkpoint_dir = 'checkpoints/checkpoints-FSGNNConv/'
+    model_dir = 'model/'
+    is_best = epoch
+    
+    for i in range(0, len(roc_scores)):
+        if exp[i] < roc_scores[i]:
+            exp[i] = roc_scores[i]
+            is_best = True
+            
+    filename = "results-exp/name-file.txt"
+    file = open(filename, "a")
+    file.write("ROC-AUC scores:\t")
+    #file.write(str(exp))
+    file.write(str(roc_scores)+"\t ; ")
+    file.write(str(exp)) 
+    file.write("\n")
+    file.close()
+    
+    if baseline == 0:
+        save_ckp(checkpoint_gnn, is_best, checkpoint_dir, model_dir, "/FS-GNNConv-GNN_tox21_5.pt", "/FS-GNNConv-GNN_tox21_5.pt")
+        save_ckp(checkpoint_cnn, is_best, checkpoint_dir, model_dir, "/FS-GNNConv-CNN_tox21_5.pt", "/FS-GNNConv-CNN_tox21_5.pt")
+
+    elif baseline == 1:
+        save_ckp(checkpoint_gnn, is_best, checkpoint_dir, model_dir, "/GNN_tox21_5.pt", "/GNN_tox21_5.pt")
+        
+FS-GNNConv/eval_model.py
+import argparse
+import torch
+from fsgnnconv_eval import FSGNNConv_eval
+import statistics
+import shutil
+import matplotlib.pyplot as plt
+
+def save_ckp(state, is_best, checkpoint_dir, best_model_dir, filename, best_model):
+    
+    f_path = checkpoint_dir + filename
+    torch.save(state, f_path)
+    if is_best:
+        best_fpath = best_model_dir + best_model
+        shutil.copyfile(f_path, best_fpath)
+
+def save_result(epoch, N, exp, filename):
+            
+    file = open(filename, "a")
+    
+    file.write("Results: " + "\t")
+    if epoch < N:
+     file.write(str(exp) + "\t")
+    if epoch >= N:
+      for list_acc in exp:
+        file.write(str(epoch) + " Support Sets: (Mean:"+ str(statistics.mean(list_acc)) +", SD:" +str(statistics.stdev(list_acc)) + ") | \t")
+    file.write("\n")
+    file.close()
+
+
+dataset = "tox21"
+gnn= "gin"
+support_set = 5
+pretrained = "pre-trained/supervised_contextpred.pth"
+baseline = 0
+device = "cuda:0"
+
+"""
+For this example, on fsgnnconv_eval.py consider:
+ckp_path_gnn = "checkpoints/checkpoints-FSGNNConv/check-sider-5-gnn.pt"
+ckp_path_cnn = "checkpoints/checkpoints-FSGNNConv/check-sider-5-cnn.pt"
+
+and
+
+Uncomment last line of fsgnnconv_eval.py    
+"""
+
+# FS-GNNConv - Two module GNN-CNN architecture
+# GraphSage - assumes that nodes that reside in the same neighborhood should have similar embeddings.
+# GIN - Graph Isomorphism Network
+# GCN - Standard Graph Convolutional Network
+
+
+device = "cuda:0"      
+model_eval = FSGNNConv_eval(dataset, gnn, support_set, pretrained, baseline)
+
+print("Dataset:", dataset)
+
+roc_auc_list = []
+
+if dataset== "tox21":
+    exp = [[],[],[]]
+    labels =  ['SR-HSE', 'SR-MMP', 'SR-p53']
+elif dataset == "sider":
+    exp = [[],[],[],[],[],[]]
+    labels =  ['R.U.D.', 'P.P.P.C.', 'E.L.D.', 'C.D.', 'N.S.D.', 'I.P.P.C.']
+
+    
+N = 30
+   
+for epoch in range(1, 10000):
+    
+    roc_scores, gnn_model, cnn_model, gnn_opt, cnn_opt = model_eval.meta_evaluate() #FS-GNNConv
+    #roc_scores, gnn_model, gnn_opt = model.meta_evaluate(grads) #baselines
+    if roc_auc_list != []:
+        for score in range(len(roc_auc_list)):
+
+            if roc_auc_list[score] < roc_scores[score]:
+                roc_auc_list[score] = roc_scores[score]
+                
+    if epoch <= N:
+      i=0
+      for a in roc_scores:
+        exp[i].append(round(a,4))
+        i+=1
+      
+    if epoch > N:
+      for i in range(len(exp)):
+        if min(exp[i]) < round(roc_scores[i],4):
+          index = exp[i].index(min(exp[i]))
+          exp[i][index] = roc_scores[i]
+    else:
+        roc_auc_list = roc_scores
+       
+    
+    save_result(epoch, N, exp, "results-exp/mean-FSGNNConv-tox21-5.txt")
+    
+   
+    if dataset == "tox21":
+        box_plot_data=[exp[0], exp[1], exp[2]]
+        plot_title = "Tox21"
+    elif dataset == "sider":
+        box_plot_data=[exp[0], exp[1], exp[2], exp[3], exp[4], exp[5]]
+        plot_title = "SIDER"  
+
+    fig = plt.figure()   
+    fig.suptitle(plot_title, fontsize=14, fontweight='bold')
+    ax = fig.add_subplot(111)
+    ax.boxplot(box_plot_data,labels=labels)
+    ax.set_xlabel('Test Task')
+    ax.set_ylabel('ROC-AUC score')
+    plt.grid(b=False)
+    if epoch == N:
+        plt.savefig('plots/boxplot_FSGNNConv_'+ str(dataset) + '_' + str(support_set))
+    plt.show()
+    plt.close(fig)
+   
+    if epoch >= N/2:
+        for list_acc in exp:
+            print(str(epoch) + " Support Sets: (Mean:"+ str(statistics.mean(list_acc)) +", SD:" +str(statistics.stdev(list_acc)) + ")")

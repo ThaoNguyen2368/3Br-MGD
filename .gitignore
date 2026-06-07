@@ -2,3 +2,23 @@
 *.pyc
 *.pyo
 *.pyd
+
+# Ignored repos
+FS-GCvTR/
+FS-GNNTR_repo/
+AttFPGNN-MAML/
+
+# Docs
+docs/
+
+# Folders inside results
+results/*/
+
+# Large files and logs
+checkpoints/
+*.log
+profile_output.txt
+test_output.log
+
+# Huge JSON data files
+baselines/*.json

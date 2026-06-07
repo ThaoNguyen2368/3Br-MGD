@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from torch_geometric.data import Batch
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
 
 
 def collate_batch(samples: list, device: torch.device):
@@ -67,18 +67,20 @@ def evaluate_meta_task(protonet, support: list, query: list, device: torch.devic
             except Exception:
                 f1 = float('nan')
 
-        # --- AUROC ---
+        # --- AUROC & AUPRC ---
         pos_index = class_to_idx.get(1, None)
         if pos_index is None or len(torch.unique(query_y)) < 2:
             auroc = float('nan')
+            auprc = float('nan')
         else:
             try:
                 probs = torch.softmax(logits, dim=1)[:, pos_index]
-                auroc = roc_auc_score(
-                    query_y.cpu().numpy(),
-                    probs.detach().cpu().numpy(),
-                )
+                probs_np = probs.detach().cpu().numpy()
+                query_y_np = query_y.cpu().numpy()
+                auroc = roc_auc_score(query_y_np, probs_np)
+                auprc = average_precision_score(query_y_np, probs_np)
             except Exception:
                 auroc = float('nan')
+                auprc = float('nan')
 
-    return acc, f1, auroc
+    return acc, f1, auroc, auprc

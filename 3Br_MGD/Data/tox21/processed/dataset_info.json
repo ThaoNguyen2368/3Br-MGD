@@ -4,55 +4,55 @@
       "n_positive": 308,
       "n_negative": 6950,
       "n_total": 7258,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-AR.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-AR.pt"
     },
     "NR-AR-LBD": {
       "n_positive": 237,
       "n_negative": 6514,
       "n_total": 6751,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-AR-LBD.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-AR-LBD.pt"
     },
     "NR-AhR": {
       "n_positive": 768,
       "n_negative": 5774,
       "n_total": 6542,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-AhR.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-AhR.pt"
     },
     "NR-Aromatase": {
       "n_positive": 300,
       "n_negative": 5515,
       "n_total": 5815,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-Aromatase.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-Aromatase.pt"
     },
     "NR-ER": {
       "n_positive": 791,
       "n_negative": 5395,
       "n_total": 6186,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-ER.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-ER.pt"
     },
     "NR-ER-LBD": {
       "n_positive": 349,
       "n_negative": 6599,
       "n_total": 6948,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-ER-LBD.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-ER-LBD.pt"
     },
     "NR-PPAR-gamma": {
       "n_positive": 186,
       "n_negative": 6257,
       "n_total": 6443,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\NR-PPAR-gamma.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/NR-PPAR-gamma.pt"
     },
     "SR-ARE": {
       "n_positive": 942,
       "n_negative": 4883,
       "n_total": 5825,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\SR-ARE.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/SR-ARE.pt"
     },
     "SR-ATAD5": {
       "n_positive": 264,
       "n_negative": 6801,
       "n_total": 7065,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_train\\SR-ATAD5.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_train/SR-ATAD5.pt"
     }
   },
   "meta_test": {
@@ -60,19 +60,19 @@
       "n_positive": 372,
       "n_negative": 6088,
       "n_total": 6460,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_test\\SR-HSE.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_test/SR-HSE.pt"
     },
     "SR-MMP": {
       "n_positive": 918,
       "n_negative": 4886,
       "n_total": 5804,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_test\\SR-MMP.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_test/SR-MMP.pt"
     },
     "SR-p53": {
       "n_positive": 423,
       "n_negative": 6344,
       "n_total": 6767,
-      "save_path": "D:\\3Br_MGD\\3Br_MGD\\Data\\tox21\\processed\\meta_test\\SR-p53.pt"
+      "save_path": "3Br_MGD/Data/tox21/processed/meta_test/SR-p53.pt"
     }
   }
 }

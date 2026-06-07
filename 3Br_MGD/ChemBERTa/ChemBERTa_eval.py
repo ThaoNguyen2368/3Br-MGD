@@ -6,9 +6,24 @@ import numpy as np
 import torch
 import torch.nn as nn
 from copy import deepcopy
-from sklearn.metrics import f1_score, roc_auc_score
+from sklearn.metrics import f1_score, roc_auc_score, average_precision_score
 from transformers import AutoTokenizer, AutoModel
+import sys
+# Thêm đường dẫn tới thư mục Br_MGD để import 'data'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "Br_MGD")))
+
 from data import load_all_splits
+
+
+def set_seed(seed: int = 42):
+    """Fix tất cả nguồn ngẫu nhiên để đảm bảo reproducibility."""
+    random.seed(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    if torch.cuda.is_available():
+        torch.cuda.manual_seed_all(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 
 
 class ChemBERTaProtoNet(nn.Module):
@@ -136,9 +151,9 @@ def evaluate_episode(model, support, query, device):
         unique_q = set(query_y_raw.cpu().numpy().tolist())
         unique_s = set(support_y.cpu().numpy().tolist())
         if len(unique_q) < 2 or len(unique_s) < 2:
-            return float('nan'), float('nan'), float('nan')
+            return float('nan'), float('nan'), float('nan'), float('nan')
         if not unique_q.issubset(unique_s):
-            return float('nan'), float('nan'), float('nan')
+            return float('nan'), float('nan'), float('nan'), float('nan')
 
         logits, class_to_idx = model(sup_smiles, support_y, qry_smiles, device)
         query_y_remapped = torch.tensor(
@@ -150,7 +165,7 @@ def evaluate_episode(model, support, query, device):
 
         pos_idx = class_to_idx.get(1, None)
         if pos_idx is None:
-            return acc, float('nan'), float('nan')
+            return acc, float('nan'), float('nan'), float('nan')
 
         try:
             y_true_b = (query_y_remapped == pos_idx).cpu().numpy().astype(int)
@@ -165,10 +180,15 @@ def evaluate_episode(model, support, query, device):
                 query_y_raw.cpu().numpy(),
                 probs.detach().cpu().numpy(),
             )
+            auprc = average_precision_score(
+                query_y_raw.cpu().numpy(),
+                probs.detach().cpu().numpy(),
+            )
         except Exception:
             auroc = float('nan')
+            auprc = float('nan')
 
-    return acc, f1, auroc
+    return acc, f1, auroc, auprc
 
 
 def train_chemberta(
@@ -225,7 +245,7 @@ def train_chemberta(
                 for _ in range(val_episodes):
                     try:
                         support, query = create_episode(task_data, K_shot, Q_query, train=True)
-                        _, _, a = evaluate_episode(model, support, query, device)
+                        _, _, a, _ = evaluate_episode(model, support, query, device)
                         if not np.isnan(a):
                             aurocs.append(a)
                     except Exception:
@@ -268,6 +288,7 @@ def evaluate_and_write(
     task_names = list(meta_test.keys())
     n_tasks = len(task_names)
     exp = [[] for _ in range(n_tasks)]
+    auprc_exp = [[] for _ in range(n_tasks)]
     acc_exp = [[] for _ in range(n_tasks)]
     f1_exp = [[] for _ in range(n_tasks)]
 
@@ -288,18 +309,21 @@ def evaluate_and_write(
             task_data = meta_test[task_name]
             try:
                 support, query = create_episode(task_data, K_shot, Q_query, train=True)
-                acc, f1, auroc = evaluate_episode(model, support, query, device)
+                acc, f1, auroc, auprc = evaluate_episode(model, support, query, device)
                 exp[i].append(round(auroc, 4) if not np.isnan(auroc) else 0.0)
+                auprc_exp[i].append(round(auprc, 4) if not np.isnan(auprc) else 0.0)
                 if not np.isnan(acc):
                     acc_exp[i].append(acc)
                 if not np.isnan(f1):
                     f1_exp[i].append(f1)
             except Exception:
                 exp[i].append(0.0)
+                auprc_exp[i].append(0.0)
 
         if ep == WRITE_LIMIT:
             with open(result_file, 'a', encoding='utf-8') as rf:
-                rf.write(f"Results\t{exp}\n")
+                rf.write(f"Results AUROC\t{exp}\n")
+                rf.write(f"Results AUPRC\t{auprc_exp}\n")
 
         if ep % 10 == 0:
             means = [f"{np.mean(exp[i]):.4f}" if exp[i] else 'nan' for i in range(n_tasks)]
@@ -308,13 +332,15 @@ def evaluate_and_write(
     results = {}
     summary_lines = [
         f"{'-'*65}",
-        f"{'Task':40} {'Acc':10} {'F1':10} {'AUROC':10}  (mean±std)",
+        f"{'Task':40} {'Acc':10} {'F1':10} {'AUROC':10} {'AUPRC':10}  (mean±std)",
         f"{'-'*65}",
     ]
 
     for i, task_name in enumerate(task_names):
         auroc_mean = np.mean(exp[i]) if exp[i] else float('nan')
         auroc_std = np.std(exp[i]) if len(exp[i]) > 1 else 0.0
+        auprc_mean = np.mean(auprc_exp[i]) if auprc_exp[i] else float('nan')
+        auprc_std = np.std(auprc_exp[i]) if len(auprc_exp[i]) > 1 else 0.0
         acc_mean = np.mean(acc_exp[i]) if acc_exp[i] else float('nan')
         acc_std = np.std(acc_exp[i]) if len(acc_exp[i]) > 1 else 0.0
         f1_mean = np.mean(f1_exp[i]) if f1_exp[i] else float('nan')
@@ -323,28 +349,33 @@ def evaluate_and_write(
         line = (f"{task_name:40} "
                 f"{acc_mean:.4f}±{acc_std:.4f}  "
                 f"{f1_mean:.4f}±{f1_std:.4f}  "
-                f"{auroc_mean:.4f}±{auroc_std:.4f}")
+                f"{auroc_mean:.4f}±{auroc_std:.4f}  "
+                f"{auprc_mean:.4f}±{auprc_std:.4f}")
         summary_lines.append(line)
         print(line)
 
         results[task_name] = {
             'auroc': auroc_mean, 'auroc_std': auroc_std,
+            'auprc': auprc_mean, 'auprc_std': auprc_std,
             'acc': acc_mean, 'acc_std': acc_std,
             'f1': f1_mean, 'f1_std': f1_std,
         }
 
     all_auroc = [results[t]['auroc'] for t in task_names if not np.isnan(results[t]['auroc'])]
+    all_auprc = [results[t]['auprc'] for t in task_names if not np.isnan(results[t]['auprc'])]
     all_acc = [results[t]['acc'] for t in task_names if not np.isnan(results[t]['acc'])]
     all_f1 = [results[t]['f1'] for t in task_names if not np.isnan(results[t]['f1'])]
 
     ov_auroc = np.mean(all_auroc) if all_auroc else float('nan')
+    ov_auprc = np.mean(all_auprc) if all_auprc else float('nan')
     ov_acc = np.mean(all_acc) if all_acc else float('nan')
     ov_f1 = np.mean(all_f1) if all_f1 else float('nan')
 
     ov_line = (f"{'OVERALL AVERAGE':40} "
                f"{ov_acc:.4f}{'':12}"
                f"{ov_f1:.4f}{'':12}"
-               f"{ov_auroc:.4f}")
+               f"{ov_auroc:.4f}{'':12}"
+               f"{ov_auprc:.4f}")
     summary_lines.append(ov_line)
     summary_lines.append('-'*65)
     print(ov_line)
@@ -353,7 +384,7 @@ def evaluate_and_write(
         rf.write('\n'.join(summary_lines) + '\n')
     print(f"Done! → {result_file}")
 
-    return results, ov_auroc
+    return results, ov_auroc, ov_auprc
 
 
 def main():
@@ -374,7 +405,14 @@ def main():
     parser.add_argument('--q_query', type=int, default=128)
     parser.add_argument('--lr', type=float, default=1e-3)
     parser.add_argument('--output_dir', type=str, default='checkpoints')
+    parser.add_argument('--seed', type=int, default=42,
+                        help='Random seed for reproducibility')
+    parser.add_argument('--val_ratio', type=float, default=0.2,
+                        help='Fraction of meta_train tasks dùng làm validation (default: 0.2)')
     args = parser.parse_args()
+
+    # --- Fix seed TRƯỚC KHI split để split cũng deterministic ---
+    set_seed(args.seed)
 
     freeze_bert = not args.no_freeze
 
@@ -384,11 +422,27 @@ def main():
     print(f"Shots       {args.shots}")
     print(f"Checkpoint  {args.checkpoint}")
     print(f"freeze_bert {freeze_bert}")
+    print(f"Seed        {args.seed}")
 
     os.makedirs('results', exist_ok=True)
     os.makedirs(args.output_dir, exist_ok=True)
 
-    meta_train, meta_val, meta_test = load_all_splits(args.data_dir)
+    meta_train_all, meta_test = load_all_splits(args.data_dir)
+
+    # --- Tách meta_val ngẫu nhiên theo seed ---
+    all_task_names = list(meta_train_all.keys())
+    random.shuffle(all_task_names)          # seed đã được fix ở trên
+    n_val = max(1, int(len(all_task_names) * args.val_ratio))
+    val_keys   = all_task_names[:n_val]
+    train_keys = all_task_names[n_val:]
+
+    meta_val       = {k: meta_train_all[k] for k in val_keys}
+    meta_train     = {k: meta_train_all[k] for k in train_keys}
+
+    print(f"Val ratio   {args.val_ratio}  →  "
+          f"train={len(meta_train)} tasks, val={len(meta_val)} tasks")
+    print(f"Val tasks   {val_keys}")
+
     all_results = {}
 
     for K_shot in args.shots:
@@ -429,7 +483,7 @@ def main():
         }, ckpt_path)
         print(f"Checkpoint → {ckpt_path}")
 
-        task_results, overall_auroc = evaluate_and_write(
+        task_results, overall_auroc, overall_auprc = evaluate_and_write(
             model=model,
             meta_test=meta_test,
             device=device,
@@ -444,6 +498,7 @@ def main():
 
         all_results[shot_name] = {
             'overall_auroc': overall_auroc,
+            'overall_auprc': overall_auprc,
             'per_task': task_results,
         }
 
@@ -459,10 +514,10 @@ def main():
     print(f"\n{'='*50}")
     print(f"ChemBERTa ({args.checkpoint}) — {args.dataset.upper()}")
     print(f"{'='*50}")
-    print(f"{'Shot':12} {'Overall AUROC':15}")
-    print('-'*30)
+    print(f"{'Shot':12} {'Overall AUROC':15} {'Overall AUPRC':15}")
+    print('-'*45)
     for shot_name, r in all_results.items():
-        print(f"{shot_name:12} {r['overall_auroc']:15.4f}")
+        print(f"{shot_name:12} {r['overall_auroc']:<15.4f} {r['overall_auprc']:<15.4f}")
     print("\nDone!")
 
 
