@@ -36,7 +36,7 @@ These folders contain:
 - `dataset_info.json`: Metadata defining classes and structures.
 - `meta_train/` & `meta_test/`: PyTorch Geometric (`.pt`) graph data for individual tasks.
 
-*(Note: Due to GitHub file size limits, large `.pt` and `.json` data files may need to be generated locally or downloaded via external storage).*
+*(Note: Due to GitHub file size limits, large `.pt` and `.json` data files are not included here. The Tox21 and SIDER datasets, as well as the test episodes (`episodes_seed42_tox21.json`, `episodes_seed42_sider.json`), can be downloaded from [this Google Drive link](https://drive.google.com/drive/u/0/folders/1uDY_SWy8gvzAziBkcnJMuHFzJI8IRDrr)).*
 
 ## Running Experiments
 
