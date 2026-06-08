@@ -1,86 +1,127 @@
-# 3Br-MGD Implementation
+# 3Br-MGD: few-shot toxicity prediction with a three-branch deep encoder and meta-learning framework
 
-This is the source code repository for the 3Br-MGD model and related baseline comparisons.
+This repository contains the official implementation of the paper:
 
-## Highlights
-- **Unified Evaluation Interface** across multiple few-shot learning baselines (FS-GCvTR, FS-GNNTR, GCN, GIN, GraphSAGE, AttFPGNN) with shared utilities for logging, evaluation, and checkpointing.
-- **Dataset-ready Directory Layout** for benchmark molecular property prediction datasets (`tox21` and `sider`).
-- **Comprehensive Benchmarking** through an automated script (`run_all_baselines.py`) that seamlessly runs training and testing protocols.
-- **Metrics**: AUROC evaluated under standardized N-way K-shot settings (e.g., 5-shot, 10-shot).
+**"3Br-MGD: few-shot toxicity prediction with a three-branch deep encoder and meta-learning framework"**
 
-## Repository Layout
+---
+
+## Table of Contents
+
+1. [System Requirements](#system-requirements)
+2. [Repository Structure](#repository-structure)
+3. [Environment Setup](#environment-setup)
+4. [Dataset](#dataset)
+5. [Pre-generated Evaluation Episodes](#pre-generated-evaluation-episodes)
+6. [Usage Guide](#usage-guide)
+   - [Quick Start](#quick-start)
+   - [Data Preparation](#data-preparation)
+   - [Training](#training)
+   - [Evaluation](#evaluation)
+
+---
+
+## 1. System Requirements
+
+- **Python:** 3.11
+- **PyTorch:** 2.3.0
+- **CUDA:** 12.1
+- **PyTorch Geometric:** 2.7.0
+- **RDKit:** 2025.9.5
+- **Other core libraries:** `numpy`, `pandas`, `scikit-learn`, `transformers`
+
+## 2. Repository Structure
+
 ```text
-├── 3Br_MGD/                # Core model definitions and variations (Br_MGD, Branch, ChemBERTa)
-│   ├── Br_MGD/             # 3Br-MGD training and evaluation scripts
-│   └── Data/               # Preprocessed splits and graphs for datasets (tox21, sider)
-├── baselines/              # Implementation of all baseline models
-│   ├── run_all_baselines.py# Master script to execute training/testing across all baselines
-│   └── episode_manager.py  # Utility for consistent few-shot episode generation
-├── checkpoints/            # Saved model checkpoints across experiments
-├── results/                # Output metrics, performance summaries, and logs
-├── requirements.txt        # Python dependencies
-└── README.md               # Project documentation (this file)
+├── 3Br_MGD/                 # Core model definitions and variations (3Br-MGD)
+│   ├── Br_MGD/              # 3Br-MGD training and evaluation scripts
+│   └── Data/                # Preprocessed splits and graphs for datasets (tox21, sider)
+│
+├── baselines/               # Implementation of all baseline models
+│   ├── fsgcvtr/             # FS-GCvTR baseline
+│   ├── fsgnntr/             # FS-GNNTR baseline
+│   ├── attfpgnn/            # AttFPGNN baseline 
+│   ├── gcn/                 # GCN baseline
+│   ├── gin/                 # GIN baseline
+│   ├── graphsage/           # GraphSAGE baseline
+│   └── pre-trained/         # Pre-trained baseline weights
+│
+├── checkpoints/             # Directory for saving trained model weights
+├── results/                 # Directory for storing evaluation metrics (JSON format)
+└── README.md              
 ```
 
-## Prerequisites
-- **Python 3.8+** (Tested with Conda environments)
-- **CUDA-capable GPU** (Strongly recommended for Graph Neural Networks training)
-- Install dependencies:
-  ```bash
-  pip install -r requirements.txt
-  ```
+## 3. Environment Setup
 
-## Datasets
-The repository expects preprocessed datasets under `3Br_MGD/Data/<dataset-name>/processed/` (e.g., `tox21` and `sider`). 
-These folders contain:
-- `dataset_info.json`: Metadata defining classes and structures.
-- `meta_train/` & `meta_test/`: PyTorch Geometric (`.pt`) graph data for individual tasks.
+We recommend using `conda` to manage the environment:
 
-*(Note: Due to GitHub file size limits, large `.pt` and `.json` data files are not included here. The Tox21 and SIDER datasets, as well as the test episodes (`episodes_seed42_tox21.json`, `episodes_seed42_sider.json`), can be downloaded from [this Google Drive link](https://drive.google.com/drive/u/0/folders/1uDY_SWy8gvzAziBkcnJMuHFzJI8IRDrr)).*
-
-## Running Experiments
-
-### 1. Baselines
-All training and testing for baselines are managed by a centralized runner script: `run_all_baselines.py`.
-
-**Train all baselines (e.g., on Tox21):**
 ```bash
-python baselines/run_all_baselines.py --dataset tox21 --shots 5 10 --mode train
+conda create -n 3Br_MGD python=3.11 -y
+conda activate 3Br_MGD
 ```
 
-**Test all baselines:**
-*(Make sure episodes are generated first using `episode_manager.py` if testing in strict predefined episodes)*
+Install the required dependencies directly via `pip`:
+
 ```bash
-python baselines/run_all_baselines.py --dataset tox21 --shots 5 10 --mode test
+pip install -r requirements.txt
 ```
 
-**Run everything at once (Train + Test):**
+## 4. Dataset
+
+The repository currently supports the **Tox21** and **SIDER** datasets for few-shot molecular property prediction.
+
+The Tox21 and SIDER datasets are downloaded from the repository Data (chem_dataset.zip) from Hu et al. (2020). 
+The data should be placed and processed inside `3Br_MGD/Data/`. You can run the `3Br_MGD/Br_MGD/data.py` script to perform the preprocessing steps automatically.
+
+### Data Preparation
+For dataset preprocessing, run:
 ```bash
-python baselines/run_all_baselines.py --dataset tox21 --shots 5 10 --mode all
+python 3Br_MGD/Br_MGD/data.py
 ```
+## 5. Pre-generated Evaluation Episodes
 
-### 2. Main Model (3Br-MGD)
-The core 3Br-MGD model is run directly from the `3Br_MGD/Br_MGD/` directory.
+To ensure fair and reproducible evaluation, all methods are tested on the same pre-generated evaluation episodes. 
 
-**Training 3Br-MGD on Tox21:**
+Files:
+- `baselines/episodes_seed42_tox21.json`
+- `baselines/episodes_seed42_sider.json`
+
+These files contain the exact support/query task splits used in the reported experiments. The files can be accessed or cited via Zenodo:
+**Download/DOI:** [https://doi.org/10.5281/zenodo.20590676](https://doi.org/10.5281/zenodo.20590676)
+
+## 6. Usage Guide
+### Training
+**Training 3Br-MGD:**
 ```bash
-python 3Br_MGD/Br_MGD/BrMGD_train.py \
-    --data_dir 3Br_MGD/Data/tox21/processed \
-    --output_dir checkpoints/BrMGD \
-    --dataset tox21 \
-    --shots 5 10 \
-    --max_epochs 1000
+python 3Br_MGD/Br_MGD/BrMGD_train.py --data_dir 3Br_MGD/Data/tox21/processed --dataset tox21 --shots 5 10 --max_epochs 1000 --patience 100
 ```
 
-**Testing 3Br-MGD on Tox21:**
+**Training Baselines:**
 ```bash
-python 3Br_MGD/Br_MGD/BrMGD_eval.py \
-    --data_dir 3Br_MGD/Data/tox21/processed \
-    --ckpt_dir checkpoints/BrMGD \
-    --output_dir results/tox21 \
-    --dataset tox21 \
-    --shots 5 10 \
-    --episodes_file baselines/episodes_seed42_tox21.json
+python baselines/run_all_baselines.py --dataset tox21 --shots 5 10 --mode train --max_epochs 1000 --patience 100 --baselines fsgnntr
 ```
 
-Logs, checkpoints, and metrics CSVs are automatically saved under `checkpoints/` and `results/`.
+**Training Branches:**
+```bash
+python 3Br_MGD/Branch/branch_Train.py --data_dir 3Br_MGD/Data/tox21/processed --output_dir checkpoints --dataset tox21 --variants all 
+```
+
+### Evaluation
+**Testing 3Br-MGD:**
+```bash
+python 3Br_MGD/Br_MGD/eval_model.py --data_dir 3Br_MGD/Data/tox21/processed --dataset tox21 --shots 5 10 --episodes_file baselines/episodes_seed42_tox21.json
+```
+
+**Testing Branches:**
+```bash
+python 3Br_MGD/Br_MGD/eval_model.py --data_dir 3Br_MGD/Data/sider/processed --checkpoint_dir /home/fit03/BrMGD/3Br-MGD/checkpoints --dataset sider --episodes_file baselines/episodes_seed42_tox21.json
+```
+To view the results for 3Br-MGD and its branches, check the outputs located in `results/mean-3BrMGD_<dataset>_<shot>shot.txt` and `results/ablation_<dataset>_summary.json`.
+
+**Testing Baselines:**
+```bash
+python baselines/run_all_baselines.py --dataset tox21 --shots 5 10 --mode test --baselines fsgnntr
+```
+To view a results of baselines, check the outputs located in `checkpoints/results_tox21.json`
+
+**Metrics Evaluated:** AUROC, AUPRC, F1-Score, Accuracy
