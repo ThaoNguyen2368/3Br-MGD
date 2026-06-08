@@ -20,10 +20,9 @@ from copy import deepcopy
 _BASELINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 _PROJECT_ROOT  = os.path.abspath(os.path.join(_BASELINE_ROOT, '..'))
 _BRMGD_PATH    = os.path.join(_PROJECT_ROOT, '3Br_MGD', 'Br_MGD')
-_ATTFPGNN_PATH = os.path.join(_PROJECT_ROOT, 'AttFPGNN-MAML', 'MoleculeNet')
-_ADKF_IFT_PATH = os.path.join(_PROJECT_ROOT, 'AttFPGNN-MAML', 'ADKF-IFT', 'MoleculeNet')
+_ATTFPGNN_LOCAL = os.path.join(_BASELINE_ROOT, 'attfpgnn')
 
-for p in [_BRMGD_PATH, _ATTFPGNN_PATH, _ADKF_IFT_PATH, _BASELINE_ROOT, _PROJECT_ROOT]:
+for p in [_BRMGD_PATH, _ATTFPGNN_LOCAL, _BASELINE_ROOT, _PROJECT_ROOT]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -243,8 +242,8 @@ def run_train(CFG, args):
             pretrained=CFG.PRETRAINED,
             # Cần khai báo để tránh AttributeError nếu PRETRAINED=True
             pretrained_weight_path=os.path.join(
-                _ATTFPGNN_PATH, 'chem_lib', 'models', 'weights',
-                'gin_supervised_contextpred.pth'
+                _BASELINE_ROOT, 'pre-trained',
+                'supervised_contextpred.pth'
             ),
             gpu_id=0
         )

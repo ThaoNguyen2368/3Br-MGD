@@ -9,14 +9,12 @@ from rdkit import Chem
 _BASELINE_ROOT  = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 _PROJECT_ROOT   = os.path.abspath(os.path.join(_BASELINE_ROOT, '..'))
 _BRMGD_PATH     = os.path.join(_PROJECT_ROOT, '3Br_MGD', 'Br_MGD')
-_ADKF_DATA_PATH = os.path.join(_PROJECT_ROOT, 'AttFPGNN-MAML', 'MoleculeNet', 'data')
+LOCAL_DATA_PATH = os.path.join(_BASELINE_ROOT, 'attfpgnn', 'data')
 
 # Insert paths to import correctly
 sys.path.insert(0, _BRMGD_PATH)
-sys.path.insert(0, _ADKF_DATA_PATH)
 
 from data import load_all_splits
-# From AttFPGNN-MAML/MoleculeNet/data/fp_mixed.py
 from fp_mixed import get_mixed_fps
 
 
@@ -91,20 +89,20 @@ def generate_fingerprints_for_dataset(dataset_name):
     all_fps = np.array([fp_dict[s] for s in all_smis_final], dtype=np.float32)
     print(f"FP matrix shape: {all_fps.shape}  (expected: [{len(all_smis_final)}, 1489])")
 
-    # Save to ADKF_DATA_PATH where MamlMolRelationModel expects them
-    os.makedirs(_ADKF_DATA_PATH, exist_ok=True)
-    np.save(os.path.join(_ADKF_DATA_PATH, "all_fps.npy"), all_fps)
+    # Save to LOCAL_DATA_PATH where MamlMolRelationModel expects them
+    os.makedirs(LOCAL_DATA_PATH, exist_ok=True)
+    np.save(os.path.join(LOCAL_DATA_PATH, "all_fps.npy"), all_fps)
 
-    with open(os.path.join(_ADKF_DATA_PATH, "all_smis.list"), 'w') as fw:
+    with open(os.path.join(LOCAL_DATA_PATH, "all_smis.list"), 'w') as fw:
         json.dump(all_smis_final, fw)
 
     # Dummy pharmacophore file to prevent FileNotFoundError in model
     # (USE_PHARMACOPHORE = False in repo gốc, nhưng model vẫn try load)
-    pharm_path = os.path.join(_ADKF_DATA_PATH, "all_pharm_graph.npy")
+    pharm_path = os.path.join(LOCAL_DATA_PATH, "all_pharm_graph.npy")
     if not os.path.exists(pharm_path):
         np.save(pharm_path, np.array([]))
 
-    print(f"Fingerprints saved to: {_ADKF_DATA_PATH}")
+    print(f"Fingerprints saved to: {LOCAL_DATA_PATH}")
     print(f"  all_fps.npy   : {all_fps.shape}")
     print(f"  all_smis.list : {len(all_smis_final)} entries")
     print("Done.")

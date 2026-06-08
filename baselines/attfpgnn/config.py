@@ -2,11 +2,9 @@ import os
 
 MODEL_NAME = 'AttFPGNN'
 
-ATTFPGNN_REPO = os.path.abspath(
-    os.path.join(os.path.dirname(__file__), '..', '..', 'AttFPGNN-MAML')
-)
-ADKF_IFT_DIR = os.path.join(ATTFPGNN_REPO, 'ADKF-IFT', 'MoleculeNet')
-ATTFPGNN_DATA_DIR = os.path.join(ATTFPGNN_REPO, 'MoleculeNet', 'data')
+ATTFPGNN_REPO = os.path.dirname(__file__)
+ADKF_IFT_DIR = os.path.join(ATTFPGNN_REPO, 'chem_lib')
+ATTFPGNN_DATA_DIR = os.path.join(ATTFPGNN_REPO, 'data')
 
 # Architecture (defaults from AttFPGNN-MAML)
 GNN_TYPE = 'gin'
