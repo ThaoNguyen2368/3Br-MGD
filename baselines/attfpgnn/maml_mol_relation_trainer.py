@@ -14,7 +14,7 @@ from torch_geometric.data import DataLoader
 
 from chem_lib.datasets import sample_meta_datasets, sample_test_datasets, MoleculeDataset
 from chem_lib.utils import Logger
-from maml_mol_relation_model import calculate_prototypes
+from baselines.attfpgnn.maml_mol_relation_model import calculate_prototypes
 
 
 class MamlMolRelationTrainer(nn.Module):

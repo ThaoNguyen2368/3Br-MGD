@@ -117,20 +117,23 @@ _PRECOMPUTED_GRAPHS = {}
 
 def build_smiles_lookup(data_dir: str):
     """
-    Load all .pt files from data_dir and map SMILES to their precomputed PyG graphs.
+    Load meta_test .pt files from data_dir and map SMILES to their precomputed PyG graphs.
     Call this once before testing to bypass RDKit entirely.
+
+    NOTE: Only meta_test is loaded because all test episode SMILES originate
+    from meta_test tasks. Loading meta_train would be redundant since those
+    SMILES are never queried during evaluation.
     """
     from data import load_all_splits
-    print(f"Preloading graphs from {data_dir} to bypass RDKit...")
-    meta_train, meta_test = load_all_splits(data_dir)
-    
-    for splits in [meta_train, meta_test]:
-        for task_name, task_data in splits.items():
-            for sample in task_data['pos'] + task_data['neg']:
-                # The .pt file stores 'smiles' and 'graph'
-                if sample['smiles'] not in _PRECOMPUTED_GRAPHS:
-                    _PRECOMPUTED_GRAPHS[sample['smiles']] = sample['graph']
-    print(f"Preloaded {len(_PRECOMPUTED_GRAPHS)} unique graphs.")
+    print(f"Preloading meta_test graphs from {data_dir} to bypass RDKit...")
+    _, meta_test = load_all_splits(data_dir)
+
+    for task_name, task_data in meta_test.items():
+        for sample in task_data['pos'] + task_data['neg']:
+            # The .pt file stores 'smiles' and 'graph'
+            if sample['smiles'] not in _PRECOMPUTED_GRAPHS:
+                _PRECOMPUTED_GRAPHS[sample['smiles']] = sample['graph']
+    print(f"Preloaded {len(_PRECOMPUTED_GRAPHS)} unique graphs (meta_test only).")
 
 
 def reconstruct_sample_from_smiles(smiles: str, label: int) -> dict:

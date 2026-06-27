@@ -9,7 +9,8 @@ def adapt_sample_to_attfpgnn(sample: dict) -> Data:
     Additionally, it requires the 'smiles' attribute for fingerprint lookup.
     """
     # Use the existing adapter to get the correct node/edge indices
-    data = adapt_graph_to_fsgnntr(sample['graph'])
+    smiles = sample.get('smiles', '')
+    data = adapt_graph_to_fsgnntr(sample['graph'], smiles=smiles)
     
     # Attach label and smiles
     data.y = torch.tensor([sample['label']], dtype=torch.long)

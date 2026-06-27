@@ -56,15 +56,38 @@ ATOM_3BR_TO_FSGNNTR = torch.tensor(_ATOM_3BR_TO_FSGNNTR, dtype=torch.long)
 # FS-GNNTR possible_bond_dirs: [NONE, ENDUPRIGHT, ENDDOWNRIGHT] → default 0 (NONE)
 
 
-_FSGNNTR_CACHE = {}
+# ─── Format-conversion cache (keyed by SMILES string for GC safety) ──────────
+# Using SMILES as key instead of id(graph) because Python's id() returns a memory
+# address that can be reused after garbage collection, potentially returning the
+# wrong cached graph for a new object at the same address.
+_FSGNNTR_CACHE: dict = {}   # Dict[smiles: str -> Data(long-index format)]
 
-def adapt_graph_to_fsgnntr(graph_3br: Data) -> Data:
+
+def clear_fsgnntr_cache() -> None:
+    """
+    Clear the format-conversion cache.
+    Call this between different model runs within the same process to prevent
+    stale cached graphs from persisting across experiments.
+
+    Example:
+        from graph_adapter import clear_fsgnntr_cache
+        clear_fsgnntr_cache()   # reset before each baseline model
+    """
+    _FSGNNTR_CACHE.clear()
+
+
+def adapt_graph_to_fsgnntr(graph_3br: Data, smiles: str = '') -> Data:
     """
     Convert a 3Br-MGD molecular graph to FS-GNNTR long-index format.
+
+    Args:
+        graph_3br : Source graph in 3Br-MGD float one-hot format.
+        smiles    : SMILES string of the molecule (used as cache key).
+                    If empty, caching is skipped and conversion runs every call.
     """
-    gid = id(graph_3br)
-    if gid in _FSGNNTR_CACHE:
-        return _FSGNNTR_CACHE[gid]
+    if smiles and smiles in _FSGNNTR_CACHE:
+        cached = _FSGNNTR_CACHE[smiles]
+        return Data(x=cached.x, edge_index=cached.edge_index, edge_attr=cached.edge_attr)
 
     N = graph_3br.x.shape[0]
     E = graph_3br.edge_attr.shape[0]
@@ -93,8 +116,10 @@ def adapt_graph_to_fsgnntr(graph_3br: Data) -> Data:
         edge_index=graph_3br.edge_index.clone(),
         edge_attr=edge_attr_new,
     )
-    _FSGNNTR_CACHE[gid] = new_graph
-    
+
+    if smiles:
+        _FSGNNTR_CACHE[smiles] = new_graph
+
     return Data(x=new_graph.x, edge_index=new_graph.edge_index, edge_attr=new_graph.edge_attr)
 
 
@@ -105,8 +130,9 @@ def adapt_sample_to_fsgnntr(sample: dict) -> dict:
 
     Returns minimal dict: {'graph': Data(long-index format), 'label': int, 'smiles': str}
     """
+    smiles = sample.get('smiles', '')
     return {
-        'graph':  adapt_graph_to_fsgnntr(sample['graph']),
+        'graph':  adapt_graph_to_fsgnntr(sample['graph'], smiles=smiles),
         'label':  sample['label'],
-        'smiles': sample.get('smiles', ''),
+        'smiles': smiles,
     }

@@ -31,16 +31,22 @@ def run_fps(smi):
 def generate_fingerprints_for_dataset(dataset_name):
     """
     Generate mixed fingerprints (MACCS 167 + ErG 441 + PubChem 881 = 1489 dims)
-    for all SMILES in the 3Br-MGD dataset and save them where
+    for all SMILES in the 3Br-MGD meta_train split and save them where
     MamlMolRelationModel expects them:
         AttFPGNN-MAML/MoleculeNet/data/all_fps.npy
         AttFPGNN-MAML/MoleculeNet/data/all_smis.list
+
+    NOTE: Only meta_train SMILES are indexed here to maintain strict train/test
+    isolation. Meta_test SMILES are reconstructed on-the-fly via
+    reconstruct_sample_from_smiles() → build_smiles_lookup() during evaluation.
     """
     print(f"Generating fingerprints for {dataset_name}...")
     data_dir = os.path.join(_PROJECT_ROOT, '3Br_MGD', 'Data', dataset_name, 'processed')
 
-    # Load all 3Br-MGD data to collect SMILES
-    meta_train, meta_test = load_all_splits(data_dir)
+    # Only load meta_train — meta_test is NOT needed for fingerprint pre-computation.
+    # Each fingerprint is computed independently from SMILES via RDKit (no global
+    # statistics), so excluding meta_test has zero effect on meta_train fingerprints.
+    meta_train, _ = load_all_splits(data_dir)
 
     all_smis_set = set()
     for task_data in meta_train.values():
@@ -50,15 +56,9 @@ def generate_fingerprints_for_dataset(dataset_name):
                 smi = item.get('smiles') if isinstance(item, dict) else None
                 if smi:
                     all_smis_set.add(smi)
-    for task_data in meta_test.values():
-        for split_samples in task_data.values():
-            for item in split_samples:
-                smi = item.get('smiles') if isinstance(item, dict) else None
-                if smi:
-                    all_smis_set.add(smi)
 
     all_smis = list(all_smis_set)
-    print(f"Total unique SMILES for {dataset_name}: {len(all_smis)}")
+    print(f"Total unique SMILES (meta_train only) for {dataset_name}: {len(all_smis)}")
 
     # Pre-validate SMILES before dispatching to pool
     valid_smis = []

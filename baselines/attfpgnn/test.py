@@ -18,9 +18,8 @@ from collections import defaultdict
 _BASELINE_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 _PROJECT_ROOT  = os.path.abspath(os.path.join(_BASELINE_ROOT, '..'))
 _BRMGD_PATH    = os.path.join(_PROJECT_ROOT, '3Br_MGD', 'Br_MGD')
-_ATTFPGNN_LOCAL = os.path.join(_BASELINE_ROOT, 'attfpgnn')
 
-for p in [_BRMGD_PATH, _ATTFPGNN_LOCAL, _BASELINE_ROOT, _PROJECT_ROOT]:
+for p in [_BRMGD_PATH, _BASELINE_ROOT, _PROJECT_ROOT]:
     if p not in sys.path:
         sys.path.insert(0, p)
 
@@ -30,12 +29,12 @@ from baselines.attfpgnn.adapter import adapt_sample_to_attfpgnn
 from baselines.attfpgnn.prepare_fps import generate_fingerprints_for_dataset
 
 from data import load_all_splits
-from episode_manager import load_episodes, reconstruct_sample_from_smiles
-from maml_mol_relation_model import MamlMolRelationModel
-from maml_mol_relation_trainer import MamlMolRelationTrainer
+from baselines.episode_manager import load_episodes, reconstruct_sample_from_smiles
+from baselines.attfpgnn.maml_mol_relation_model import MamlMolRelationModel
+from baselines.attfpgnn.maml_mol_relation_trainer import MamlMolRelationTrainer
 import torch.nn.functional as F
 from sklearn.metrics import roc_auc_score
-from maml_utils import build_attfpgnn_batch
+from baselines.maml_utils import build_attfpgnn_batch
 
 class DummyArgs:
     def __init__(self, **kwargs):
@@ -55,14 +54,14 @@ def run_test(CFG, args):
     if not os.path.exists(fps_path):
         print("Fingerprints not found. Generating...")
         generate_fingerprints_for_dataset(args.dataset)
-        import maml_mol_relation_model
+        import baselines.attfpgnn.maml_mol_relation_model as _mmrm
         import importlib
-        importlib.reload(maml_mol_relation_model)
+        importlib.reload(_mmrm)
 
     episodes = load_episodes(args.episodes_file)
     print(f"Loaded episodes from: {args.episodes_file}")
 
-    from episode_manager import build_smiles_lookup
+    from baselines.episode_manager import build_smiles_lookup
     build_smiles_lookup(args.data_dir)
 
     all_results = {}
